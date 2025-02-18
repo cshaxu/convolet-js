@@ -1,0 +1,35 @@
+{
+  "name": "convolet",
+  "version": "0.0.0",
+  "description": "Chat-based AI workflow framework",
+  "main": "./lib/index.js",
+  "scripts": {
+    "build": "rm -rf ./lib && tsc -p tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cshaxu/convolet-js.git"
+  },
+  "keywords": [
+    "framework",
+    "workflow",
+    "di-graph",
+    "chat",
+    "ai",
+    "llm",
+    "application"
+  ],
+  "author": "cshaxu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cshaxu/convolet-js/issues"
+  },
+  "homepage": "https://github.com/cshaxu/convolet-js#readme",
+  "files": [
+    "lib"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  }
+}
