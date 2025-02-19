@@ -44,11 +44,6 @@ function throwError(
 class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   public config: NodeConfig;
   public content: NodeContent;
-  public previous: Node<
-    JSON_CHAT_OPTIONS,
-    STREAM_CHAT_OPTIONS,
-    STREAM_CHAT_RESPONSE
-  > | null;
   public executor: Executor | null;
   public adapter: Adapter<
     JSON_CHAT_OPTIONS,
@@ -59,11 +54,6 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   constructor(
     config: NodeConfig,
     content: NodeContent,
-    previous: Node<
-      JSON_CHAT_OPTIONS,
-      STREAM_CHAT_OPTIONS,
-      STREAM_CHAT_RESPONSE
-    > | null,
     executor: Executor | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
@@ -73,7 +63,6 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   ) {
     this.config = config;
     this.content = content;
-    this.previous = previous;
     this.executor = executor;
     this.adapter = adapter;
   }
@@ -139,15 +128,13 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     this.isInitiatedOrThrow();
 
     // assemble input
-    const input =
-      this.previous === null ? initialInput : this.previous.content.output;
     const { prompt, nextNodeOptions } = this.config;
 
     // generate
     const fullStreamPrompt = buildFullStreamPrompt(
       prompt,
       messages.length > 0,
-      input
+      this.content.input
     );
 
     // persist
@@ -174,8 +161,6 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     this.isInitiatedOrThrow();
 
     // assemble input
-    const input =
-      this.previous === null ? initialInput : this.previous.content.output;
     const { prompt, schema, nextNodeOptions } = this.config;
 
     // generate
@@ -183,14 +168,14 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       prompt === null || schema === null
         ? Promise.resolve({})
         : this.adapter.jsonChat(
-            buildFullJsonPrompt(prompt, input),
+            buildFullJsonPrompt(prompt, this.content.input),
             schema,
             jsonChatOptions
           );
 
     const fullNextNodeKeyPrompt = buildFullNextNodeKeyPrompt(
       nextNodeOptions,
-      input
+      this.content.input
     );
     const nextNodeKeyPromise =
       prompt !== null && nextNodeOptions.length > 1
@@ -226,7 +211,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     await this.adapter.updateNode(this.content);
   }
 
-  public async completeExecution(): Promise<void> {
+  public async completeExecution(memory: DataObject): Promise<void> {
     // valdate
     this.isExecutionNodeOrThrow();
     this.isGeneratedOrThrow();
@@ -238,7 +223,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
             output: this.content.generated,
             nextNodeKey: this.content.nextNodeKey,
           }
-        : await this.executor(this.content);
+        : await this.executor(this.content, memory);
 
     // persist
     this.content.output = output;

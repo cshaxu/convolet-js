@@ -35,6 +35,7 @@ type NodeContent = {
     key: string;
     flowId: string;
     index: number;
+    input: DataObject;
     generated: {
         text: string;
     } | DataObject | null;
@@ -57,7 +58,7 @@ type ExecutionResult = {
     output: DataObject;
     nextNodeKey: string | null;
 };
-type Executor = (nodeContent: NodeContent) => Promise<ExecutionResult>;
+type Executor = (nodeContent: NodeContent, memory: DataObject) => Promise<ExecutionResult>;
 type FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
     initialInput?: DataObject;
     userText?: string;

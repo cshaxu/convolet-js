@@ -72,6 +72,8 @@ type NodeContent = {
   // node index in the flow; starts with 0;
   // first node must be the start node, and last node is the current node.
   index: number;
+  // input for the node
+  input: DataObject;
   // output from the bot
   generated: { text: string } | DataObject | null;
   // output from either human (interaction) or system (execution)
@@ -97,7 +99,10 @@ type Message = { role: "SYSTEM" | "BOT" | "USER"; content: string };
 
 type ExecutionResult = { output: DataObject; nextNodeKey: string | null };
 
-type Executor = (nodeContent: NodeContent) => Promise<ExecutionResult>;
+type Executor = (
+  nodeContent: NodeContent,
+  memory: DataObject
+) => Promise<ExecutionResult>;
 
 type FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
   initialInput?: DataObject;

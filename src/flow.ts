@@ -166,18 +166,8 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       .filter((nc) => nodeConfigByNodeKey.has(nc.key))
       .map(
         (nc) =>
-          new Node(
-            nodeConfigByNodeKey.get(nc.key)!,
-            nc,
-            null,
-            executor,
-            adapter
-          )
+          new Node(nodeConfigByNodeKey.get(nc.key)!, nc, executor, adapter)
       );
-
-    this.nodes
-      .filter((_, i) => i > 0)
-      .forEach((node, i) => (node.previous = this.nodes.at(i - 1)!));
 
     this.executor = executor;
     this.adapter = adapter;
@@ -222,24 +212,19 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
         `Flow (${this.content.id}): missing NodeConfig (${nodeKey})`
       );
     }
+    const previousNode = this.nodes.at(-1) ?? null;
     const nodeContent: NodeContent = {
       type: nodeConfig.nodeType,
       key: nodeConfig.nodeKey,
       flowId: this.content.id,
       index: this.nodes.length,
+      input: previousNode?.content.output ?? {},
       generated: null,
       output: null,
       nextNodeKey: null,
     };
     await this.adapter.createNode(nodeContent);
-    const previousNode = this.nodes.at(-1) ?? null;
-    const node = new Node(
-      nodeConfig,
-      nodeContent,
-      previousNode,
-      this.executor,
-      this.adapter
-    );
+    const node = new Node(nodeConfig, nodeContent, this.executor, this.adapter);
     this.nodes.push(node);
     return node;
   }
@@ -292,7 +277,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               );
               break;
             case NodeType.EXECUTION:
-              await currentNode.completeExecution();
+              await currentNode.completeExecution(this.content.memory);
               break;
           }
           break;
