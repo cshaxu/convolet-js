@@ -47,6 +47,18 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
 
     const isEndNode = nodeKey === endNodeKey;
 
+    nextNodeOptions
+      .map((nno) => nno.nodeKey)
+      .forEach((nextNodeKey) => {
+        const nextNodeConfig = nodes.find((nc) => nc.nodeKey === nextNodeKey);
+        if (nextNodeConfig === undefined) {
+          throwError(
+            flowKey,
+            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeKey})`
+          );
+        }
+      });
+
     switch (nodeType) {
       case NodeType.INTERACTION:
         if (isEndNode) {
@@ -63,12 +75,10 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
         }
         const nextNodeKey = nextNodeOptions[0].nodeKey;
         const nextNodeConfig = nodes.find((nc) => nc.nodeKey === nextNodeKey);
-        if (nextNodeConfig === undefined) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeKey})`
-          );
-        } else if (nextNodeConfig.nodeType !== NodeType.EXECUTION) {
+        if (
+          nextNodeConfig !== undefined &&
+          nextNodeConfig.nodeType !== NodeType.EXECUTION
+        ) {
           throwError(
             flowKey,
             `NodeConfig (${nodeKey}): next NodeConfig (${nextNodeKey}): must be an execution node`
