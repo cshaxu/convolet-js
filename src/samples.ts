@@ -6,11 +6,13 @@ const singleNodeFlowConfig: FlowConfig = {
   endNodeKey: "start",
   nodes: [
     {
-      nodeType: NodeType.EXECUTION,
+      nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "start",
+      inputParams: ["initial"],
+      outputParam: "data",
+      nextNodeOptions: [],
       prompt: "Find out the year IBM was founded.",
       schema: "{ year: number }",
-      nextNodeOptions: [],
     },
   ],
 };
@@ -21,20 +23,24 @@ const twoEvaluationNodeFlowConfig: FlowConfig = {
   endNodeKey: "end",
   nodes: [
     {
-      nodeType: NodeType.EXECUTION,
+      nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "start",
+      inputParams: ["initial"],
+      outputParam: "data",
+      nextNodeOptions: [{ nodeKey: "end", prompt: null }],
       prompt: "Find out the year IBM was founded.",
       schema: "{ year: number; isLeapYear: boolean }",
-      nextNodeOptions: [{ prompt: "no evaluation needed", nodeKey: "end" }],
     },
     {
-      nodeType: NodeType.EXECUTION,
+      nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "end",
+      inputParams: ["data"],
+      outputParam: "dataThreeYearsAgo",
+      nextNodeOptions: [],
       prompt:
         "Tell if 3 year before the year from the input data is a leap year.",
       schema:
         "{ originalYear: number; threeYearsAgo: number; isLealYear: boolean }",
-      nextNodeOptions: [],
     },
   ],
 };
@@ -47,17 +53,20 @@ const questionEvaluationFlowConfig: FlowConfig = {
     {
       nodeType: NodeType.INTERACTION,
       nodeKey: "start",
+      inputParams: ["initial"],
+      outputParam: "userInput",
+      nextNodeOptions: [{ nodeKey: "end", prompt: null }],
       prompt: "Ask the user for their birthday",
-      schema: null,
-      nextNodeOptions: [{ prompt: "", nodeKey: "end" }],
     },
     {
-      nodeType: NodeType.EXECUTION,
+      nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "end",
+      inputParams: ["userInput"],
+      outputParam: "birthday",
+      nextNodeOptions: [],
       prompt: "Parse the input data into year, month and date.",
       schema:
         "{ year: number; month: number; date: number; isLeapYear: boolean }",
-      nextNodeOptions: [],
     },
   ],
 };
@@ -71,34 +80,47 @@ const complexFlowConfig: FlowConfig = {
     {
       nodeType: NodeType.INTERACTION,
       nodeKey: "ask-birthday",
+      inputParams: ["birthday"],
+      outputParam: "userInput",
+      nextNodeOptions: [{ nodeKey: "eval-birthday", prompt: null }],
       prompt: "Ask the user for their birthday.",
-      schema: null,
-      nextNodeOptions: [{ prompt: "", nodeKey: "eval-birthday" }],
     },
     {
-      nodeType: NodeType.EXECUTION,
+      nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "eval-birthday",
+      inputParams: ["userInput"],
+      outputParam: "birthday",
+      nextNodeOptions: [{ nodeKey: "decide-next", prompt: null }],
       prompt: "Parse the input data into year, month and date.",
       schema:
         "{ year: number; month: number; date: number; isLeapYear: boolean; season: string }",
+    },
+    {
+      nodeType: NodeType.BOT_DECISION,
+      nodeKey: "decide-next",
+      inputParams: ["birthday"],
+      outputParam: "decision",
       nextNodeOptions: [
         {
-          prompt: "when user faled to provide their birthday",
           nodeKey: "ask-birthday",
+          prompt:
+            "when input data is missing any field in this schema: { year: number; month: number; date: number }",
         },
         {
-          prompt: "when user provided their birthday",
           nodeKey: "pass-along",
+          prompt: "when input data has vaild full date",
         },
       ],
     },
     {
-      nodeType: NodeType.EXECUTION,
+      nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "pass-along",
+      inputParams: ["birthday"],
+      outputParam: "birthdayPlus",
+      nextNodeOptions: [],
       prompt: "Pass along the input data to your response",
       schema:
         "{ year: number; month: number; date: number; isLeapYear: boolean; season: string }",
-      nextNodeOptions: [],
     },
   ],
 };
