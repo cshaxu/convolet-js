@@ -179,19 +179,21 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     const { prompt, schema, nextNodeOptions } = this.config;
 
     // generate
-    const fullJsonPrompt = buildFullJsonPrompt(prompt, input);
-    const jsonPromise = this.adapter.jsonChat(
-      fullJsonPrompt,
-      schema ?? "{}",
-      jsonChatOptions
-    );
+    const jsonPromise: Promise<DataObject> =
+      prompt === null || schema === null
+        ? Promise.resolve({})
+        : this.adapter.jsonChat(
+            buildFullJsonPrompt(prompt, input),
+            schema,
+            jsonChatOptions
+          );
 
     const fullNextNodeKeyPrompt = buildFullNextNodeKeyPrompt(
       nextNodeOptions,
       input
     );
     const nextNodeKeyPromise =
-      nextNodeOptions.length > 1
+      prompt !== null && nextNodeOptions.length > 1
         ? this.adapter
             .jsonChat(
               fullNextNodeKeyPrompt,

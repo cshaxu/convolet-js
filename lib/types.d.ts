@@ -19,7 +19,7 @@ type NextNodeOption = {
 type NodeConfig = {
     nodeType: NodeType;
     nodeKey: string;
-    prompt: string;
+    prompt: string | null;
     schema: string | null;
     nextNodeOptions: NextNodeOption[];
 };

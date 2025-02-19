@@ -37,9 +37,11 @@ type NodeConfig = {
   nodeType: NodeType;
   // unique identifier for node config; to initialize a node properly
   nodeKey: string;
-  // prompt for bot to generate a response
-  prompt: string;
-  // schema for bot output; only applicable for execution node
+  // prompt for bot to generate a response;
+  // - interactive node; null will let bot to generate response freely
+  // - execution node; null will skip bot response generation and default to '{}' as output
+  prompt: string | null;
+  // schema for bot output; execution node must have it to call llm
   schema: string | null;
   // options to move forward to the next node
   nextNodeOptions: NextNodeOption[];

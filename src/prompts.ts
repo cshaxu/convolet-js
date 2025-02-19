@@ -14,26 +14,33 @@ const buildFullPrompt = (prompt: string, input: DataObject | null): string =>
   ].join("\n");
 
 const buildFullStreamPrompt = (
-  prompt: string,
+  prompt: string | null,
   hasPreviousMessages: boolean,
   input: DataObject | null
 ): string =>
   buildFullPrompt(
     [
-      prompt,
+      prompt ?? "",
       "",
       "--- TIPS FOR YOUR RESPONSE ---",
       ...(hasPreviousMessages
         ? [
             "Please review the message history and pay attention to the last user message.",
             "Make sure you reply to the user message appropriately.",
-            "If they asked a question, try your best to answer it concisely with least possible words,",
-            "because you want to focus on the question to ask them to get the answer you need.",
+            ...(prompt === null
+              ? []
+              : [
+                  "If they asked a question, try your best to answer it concisely with least possible words,",
+                  "because you want to focus on the question to ask them to get the answer you need.",
+                ]),
           ]
         : [
-            "---",
             "Your message is the first one in the conversation.",
-            "Greet the user first, and ask them the right question according to the task.",
+            ...(prompt === null
+              ? ["Greet the user first, and ask them how you can help."]
+              : [
+                  "Greet the user first, and ask them the right question according to the task.",
+                ]),
           ]),
       "",
       "Please note this system message is invisible to the user,",
