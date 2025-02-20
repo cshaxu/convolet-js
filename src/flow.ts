@@ -202,7 +202,7 @@ function buildInput(
 class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   content: FlowContent;
   nodes: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>[];
-  executor: SystemEvaluator | null;
+  systemEvaluator: SystemEvaluator | null;
   adapter: Adapter<
     JSON_CHAT_OPTIONS,
     STREAM_CHAT_OPTIONS,
@@ -215,7 +215,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     STREAM_CHAT_RESPONSE
   >(
     id: string,
-    executor: SystemEvaluator | null,
+    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
@@ -227,7 +227,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     const content = await adapter.getFlow(id);
     validateFlowConfig(content.config);
     const nodeContents = await adapter.getNodes(id);
-    return new Flow(content, nodeContents, executor, adapter);
+    return new Flow(content, nodeContents, systemEvaluator, adapter);
   }
 
   public static async create<
@@ -237,7 +237,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   >(
     config: FlowConfig,
     initialInput: NodeOutput | null,
-    executor: SystemEvaluator | null,
+    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
@@ -251,7 +251,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       initial: initialInput,
       symbolRefs: {},
     });
-    return new Flow(content, [], executor, adapter);
+    return new Flow(content, [], systemEvaluator, adapter);
   }
 
   public async delete(): Promise<number> {
@@ -263,7 +263,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   private constructor(
     content: FlowContent,
     nodeContents: NodeContent[],
-    executor: SystemEvaluator | null,
+    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
@@ -294,10 +294,10 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           nodeConfigByNodeKey,
           this.content.memory
         );
-        return new Node(nodeConfig, nc, input, executor, adapter);
+        return new Node(nodeConfig, nc, input, systemEvaluator, adapter);
       });
 
-    this.executor = executor;
+    this.systemEvaluator = systemEvaluator;
     this.adapter = adapter;
   }
 
@@ -371,7 +371,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       nodeConfig,
       nodeContent,
       input,
-      this.executor,
+      this.systemEvaluator,
       this.adapter
     );
     this.nodes.push(node);

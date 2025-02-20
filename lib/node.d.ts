@@ -3,9 +3,9 @@ declare class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
     config: NodeConfig;
     content: NodeContent;
     private input;
-    private executor;
+    private systemEvaluator;
     private adapter;
-    constructor(config: NodeConfig, content: NodeContent, input: NodeInput, executor: SystemEvaluator | null, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>);
+    constructor(config: NodeConfig, content: NodeContent, input: NodeInput, systemEvaluator: SystemEvaluator | null, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>);
     private isInteractionNodeOrThrow;
     private isBotEvaluationNodeOrThrow;
     private isSystemEvaluationNodeOrThrow;

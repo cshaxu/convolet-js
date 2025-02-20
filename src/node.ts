@@ -51,7 +51,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
 
   private input: NodeInput;
 
-  private executor: SystemEvaluator | null;
+  private systemEvaluator: SystemEvaluator | null;
   private adapter: Adapter<
     JSON_CHAT_OPTIONS,
     STREAM_CHAT_OPTIONS,
@@ -62,7 +62,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     config: NodeConfig,
     content: NodeContent,
     input: NodeInput,
-    executor: SystemEvaluator | null,
+    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
@@ -72,7 +72,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     this.config = config;
     this.content = content;
     this.input = input;
-    this.executor = executor;
+    this.systemEvaluator = systemEvaluator;
     this.adapter = adapter;
   }
 
@@ -214,7 +214,9 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
 
     // evaluate
     this.content.output =
-      this.executor === null ? {} : await this.executor(this.content);
+      this.systemEvaluator === null
+        ? {}
+        : await this.systemEvaluator(this.input, this.content, this.config);
 
     // persist
     await this.adapter.updateNode(this.content);
@@ -276,8 +278,8 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
                 ? nextNodeOptions[0]
                 : nextNodeOptions[0].nodeKey,
           }
-        : this.executor !== null && nextNodeOptions.length > 1
-        ? await this.executor(this.content)
+        : this.systemEvaluator !== null && nextNodeOptions.length > 1
+        ? await this.systemEvaluator(this.input, this.content, this.config)
         : { nextNodeKey: "" };
 
     // persist

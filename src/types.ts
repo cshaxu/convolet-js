@@ -1,3 +1,6 @@
+// common
+type Awaitable<T> = T | Promise<T>;
+
 // enums
 
 enum NodeType {
@@ -132,7 +135,7 @@ type FlowContent = {
   key: string;
   // configuration of the entire flow
   config: FlowConfig;
-  // memory for executor to manage data and state
+  // memory to manage data and state
   memory: FlowMemory;
 };
 
@@ -140,7 +143,11 @@ type FlowContent = {
 
 type Message = { role: "SYSTEM" | "BOT" | "USER"; content: string };
 
-type SystemEvaluator = (nodeContent: NodeContent) => Promise<NodeOutput>;
+type SystemEvaluator = (
+  input: NodeInput,
+  nodeContent: NodeContent,
+  nodeConfig: NodeConfig
+) => Awaitable<NodeOutput>;
 
 type FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
   userInput?: string;
@@ -172,6 +179,7 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
 
 export {
   Adapter,
+  Awaitable,
   BaseNodeConfig,
   BotEvaluationNodeConfig,
   DataObject,

@@ -1,3 +1,4 @@
+type Awaitable<T> = T | Promise<T>;
 declare enum NodeType {
     INTERACTION = "INTERACTION",
     BOT_EVALUATION = "BOT_EVALUATION",
@@ -83,7 +84,7 @@ type Message = {
     role: "SYSTEM" | "BOT" | "USER";
     content: string;
 };
-type SystemEvaluator = (nodeContent: NodeContent) => Promise<NodeOutput>;
+type SystemEvaluator = (input: NodeInput, nodeContent: NodeContent, nodeConfig: NodeConfig) => Awaitable<NodeOutput>;
 type FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
     userInput?: string;
     jsonChatOptions?: JSON_CHAT_OPTIONS;
@@ -101,4 +102,4 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Promise<NodeOutput>;
     streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
 };
-export { Adapter, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowMemory, FlowRunParams, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SymbolRef, SystemEvaluator, };
+export { Adapter, Awaitable, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowMemory, FlowRunParams, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SymbolRef, SystemEvaluator, };
