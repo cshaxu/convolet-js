@@ -1,8 +1,10 @@
 import { NextNodeOption, NodeInput } from "./types";
 
+const hasInput = (input: NodeInput): boolean => Object.keys(input).length > 0;
+
 const buildFullPrompt = (prompt: string, input: NodeInput): string =>
   [
-    ...(Object.keys(input).length === 0
+    ...(hasInput(input)
       ? []
       : [
           "--- INPUT DATA BEGINS ---",
@@ -47,13 +49,21 @@ const buildFullJsonPrompt = (prompt: string, input: NodeInput): string =>
       prompt,
       "",
       "--- TIPS FOR YOUR RESPONSE ---",
-      "Please review the task description and input data,",
+      `Please review the task description${
+        hasInput(input) ? " and input data" : ""
+      },`,
       "then generate the output data according to the output schema.",
       "",
-      "IMPORANT: ONLY ADD INFORMATION THAT IS PRESENT IN THE INPUT DATA.",
-      "- If the information is missing from the input data to generate certain fields",
+      `IMPORANT: ONLY ADD INFORMATION THAT IS PRESENT IN THE ${
+        hasInput(input) ? "INPUT DATA" : "TASK DESCRIPTION"
+      }.`,
+      `- If the information is missing from the ${
+        hasInput(input) ? "input data" : "task description"
+      } to generate certain fields`,
       "  described in the output schema, please ignore those fields in the output data.",
-      "- Do not add or make up any information that is not present in the input data,",
+      `- Do not add or make up any information that is not present in the ${
+        hasInput(input) ? "input data" : "task description"
+      },`,
       "  no matter if you already know the answer from elsewhere or not.",
       "- For the missing fiels, you should never set those fields to ",
       "  undefined, null, 0, empty string or empty array, etc.",

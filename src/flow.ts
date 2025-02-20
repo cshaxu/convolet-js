@@ -199,6 +199,22 @@ function buildInput(
   }, {} as NodeInput);
 }
 
+function setSymbolRef(
+  flowContent: FlowContent,
+  name: string,
+  nodeIndex: number,
+  path: string[]
+): boolean {
+  if (name.trim().length > 0) {
+    flowContent.memory.symbolRefs[name] = {
+      nodeIndex,
+      path,
+    };
+    return true;
+  }
+  return false;
+}
+
 class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   content: FlowContent;
   nodes: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>[];
@@ -382,31 +398,40 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     node: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   ): Promise<void> {
     const { outputParams } = node.config;
+    let shouldUpdateMemory = false;
     if (typeof outputParams === "string") {
-      this.content.memory.symbolRefs[outputParams] = {
-        nodeIndex: node.content.index,
-        path: [],
-      };
+      shouldUpdateMemory ||= setSymbolRef(
+        this.content,
+        outputParams,
+        node.content.index,
+        []
+      );
     } else if (Array.isArray(outputParams)) {
       outputParams.forEach((p) => {
         if (typeof p === "string") {
-          this.content.memory.symbolRefs[p] = {
-            nodeIndex: node.content.index,
-            path: [p],
-          };
+          shouldUpdateMemory ||= setSymbolRef(
+            this.content,
+            p,
+            node.content.index,
+            [p]
+          );
         } else if (typeof p === "object") {
           const { name, path } = p;
           const pathParts = Array.isArray(path)
             ? path
             : path.split(".").filter((s) => s.length > 0);
-          this.content.memory.symbolRefs[name] = {
-            nodeIndex: node.content.index,
-            path: pathParts,
-          };
+          shouldUpdateMemory ||= setSymbolRef(
+            this.content,
+            name,
+            node.content.index,
+            pathParts
+          );
         }
       });
     }
-    await this.adapter.updateFlow(this.content.id, this.content.memory);
+    if (shouldUpdateMemory) {
+      await this.adapter.updateFlow(this.content.id, this.content.memory);
+    }
   }
 
   // run the flow by executing nodes one by one until the one that requires user input or the end nodes
