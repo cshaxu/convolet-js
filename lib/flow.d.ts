@@ -12,7 +12,7 @@ declare class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
     getStatus(): FlowStatus;
     private start;
     private next;
-    private save;
+    private updateSymbols;
     run(params: FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>): Promise<STREAM_CHAT_RESPONSE | null>;
 }
 export { Flow };

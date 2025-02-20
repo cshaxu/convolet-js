@@ -9,6 +9,7 @@ import {
   FlowStatus,
   InteractionNodeOutput,
   Message,
+  NextNodeOption,
   NodeConfig,
   NodeContent,
   NodeInput,
@@ -35,6 +36,16 @@ function throwError(flowKey: string, message: string): void {
   throw new Error(`FlowConfig (${flowKey}): ${message}`);
 }
 
+function getOnlyNextNodeKey(
+  nextNodeOptions: string | string[] | NextNodeOption[]
+): string {
+  return typeof nextNodeOptions === "string"
+    ? nextNodeOptions
+    : typeof nextNodeOptions[0] === "string"
+    ? nextNodeOptions[0]
+    : nextNodeOptions[0].nodeKey;
+}
+
 function validateFlowConfig(flowConfig: FlowConfig): void {
   const { flowKey, nodes, startNodeKey, endNodeKey } = flowConfig;
 
@@ -54,15 +65,30 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
     const { nodeType, nodeKey, nextNodeOptions } = nodeConfig;
     const isEndNode = nodeKey === endNodeKey;
 
-    nextNodeOptions.forEach((nno) => {
-      const inputNodeConfig = nodes.find((nc) => nc.nodeKey === nno.nodeKey);
-      if (inputNodeConfig === undefined && nno.nodeKey !== "initial") {
-        throwError(
-          flowKey,
-          `NodeConfig (${nodeKey}): missing input NodeConfig (${nno.nodeKey})`
+    if (typeof nextNodeOptions === "string") {
+      if (nextNodeOptions.length > 0) {
+        const nextNodeConfig = nodes.find(
+          (nc) => nc.nodeKey === nextNodeOptions
         );
+        if (nextNodeConfig === undefined) {
+          throwError(
+            flowKey,
+            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeOptions})`
+          );
+        }
       }
-    });
+    } else {
+      nextNodeOptions.forEach((nno) => {
+        const nextNodeKey = typeof nno === "string" ? nno : nno.nodeKey;
+        const nextNodeConfig = nodes.find((nc) => nc.nodeKey === nextNodeKey);
+        if (nextNodeConfig === undefined) {
+          throwError(
+            flowKey,
+            `NodeConfig (${nodeKey}): missing input NodeConfig (${nextNodeKey})`
+          );
+        }
+      });
+    }
 
     switch (nodeType) {
       case NodeType.INTERACTION:
@@ -72,19 +98,21 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
             `NodeConfig (${nodeKey}): must be an evaluation node as end node`
           );
         }
-        if (nextNodeOptions.length !== 1) {
+        if (
+          typeof nextNodeOptions !== "string" &&
+          nextNodeOptions.length !== 1
+        ) {
           throwError(
             flowKey,
             `NodeConfig (${nodeKey}): must have exactly one next node option`
           );
         }
-        const nextNodeConfig = nodes.find(
-          (nc) => nc.nodeKey === nextNodeOptions[0].nodeKey
-        );
+        const nextNodeKey = getOnlyNextNodeKey(nextNodeOptions);
+        const nextNodeConfig = nodes.find((nc) => nc.nodeKey === nextNodeKey);
         if (nextNodeConfig === undefined) {
           throwError(
             flowKey,
-            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeOptions[0].nodeKey})`
+            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeKey})`
           );
         }
         break;
@@ -96,7 +124,11 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
             `NodeConfig (${nodeKey}): must not have next node options as end node`
           );
         }
-        if (!isEndNode && nodeConfig.nextNodeOptions.length !== 1) {
+        if (
+          !isEndNode &&
+          typeof nodeConfig.nextNodeOptions !== "string" &&
+          nodeConfig.nextNodeOptions.length !== 1
+        ) {
           throwError(
             flowKey,
             `NodeConfig (${nodeKey}): missing next node options`
@@ -149,11 +181,19 @@ function buildInput(
       acc[param] = memory.initial;
       // this can be overwritten so we are not returning here
     }
-    const inputNodeIndex = memory.symbols[param];
-    const inputNode = nodeContentByIndex.get(inputNodeIndex);
-    const input = inputNode?.output ?? null;
-    if (input !== null) {
-      acc[param] = input;
+    const symbolRef = memory.symbolRefs[param];
+    if (symbolRef === undefined) {
+      return acc;
+    }
+    const { nodeIndex, path } = symbolRef;
+    const inputNode = nodeContentByIndex.get(nodeIndex);
+    const input = inputNode?.output ?? undefined;
+    const value = path.reduce(
+      (a, p) => (a === undefined ? undefined : a[p]),
+      input as NodeInput
+    );
+    if (value !== undefined) {
+      acc[param] = value;
     }
     return acc;
   }, {} as NodeInput);
@@ -209,7 +249,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     validateFlowConfig(config);
     const content = await adapter.createFlow(config, {
       initial: initialInput,
-      symbols: {},
+      symbolRefs: {},
     });
     return new Flow(content, [], executor, adapter);
   }
@@ -338,10 +378,34 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     return node;
   }
 
-  private async save(
+  private async updateSymbols(
     node: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   ): Promise<void> {
-    this.content.memory.symbols[node.config.outputParam] = node.content.index;
+    const { outputParams } = node.config;
+    if (typeof outputParams === "string") {
+      this.content.memory.symbolRefs[outputParams] = {
+        nodeIndex: node.content.index,
+        path: [],
+      };
+    } else if (Array.isArray(outputParams)) {
+      outputParams.forEach((p) => {
+        if (typeof p === "string") {
+          this.content.memory.symbolRefs[p] = {
+            nodeIndex: node.content.index,
+            path: [p],
+          };
+        } else if (typeof p === "object") {
+          const { name, path } = p;
+          const pathParts = Array.isArray(path)
+            ? path
+            : path.split(".").filter((s) => s.length > 0);
+          this.content.memory.symbolRefs[name] = {
+            nodeIndex: node.content.index,
+            path: pathParts,
+          };
+        }
+      });
+    }
     await this.adapter.updateFlow(this.content.id, this.content.memory);
   }
 
@@ -353,7 +417,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     let currentNode = this.nodes.at(-1) ?? (await this.start());
     do {
       const { config: nodeConfig } = currentNode;
-      const { nodeType } = nodeConfig;
+      const { nodeType, nextNodeOptions } = nodeConfig;
       const nodeStatus = currentNode.getStatus();
 
       switch (nodeType) {
@@ -382,11 +446,11 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               await currentNode.interactUserInput(
                 userInput ?? "userInput is not provided"
               );
-              await this.save(currentNode);
+              await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
               currentNode = await this.next(
-                nodeConfig.nextNodeOptions[0].nodeKey
+                getOnlyNextNodeKey(nextNodeOptions)
               );
               break;
             default:
@@ -399,14 +463,14 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
               await currentNode.botEvaluate(jsonChatOptions);
-              await this.save(currentNode);
+              await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
               if (nodeConfig.nextNodeOptions.length === 0) {
                 return null;
               }
               currentNode = await this.next(
-                nodeConfig.nextNodeOptions[0].nodeKey
+                getOnlyNextNodeKey(nextNodeOptions)
               );
               break;
             default:
@@ -419,14 +483,14 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
               await currentNode.systemEvaluate();
-              await this.save(currentNode);
+              await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
               if (nodeConfig.nextNodeOptions.length === 0) {
                 return null;
               }
               currentNode = await this.next(
-                nodeConfig.nextNodeOptions[0].nodeKey
+                getOnlyNextNodeKey(nextNodeOptions)
               );
               break;
             default:
@@ -439,7 +503,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
               await currentNode.botDecide(jsonChatOptions);
-              await this.save(currentNode);
+              await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
               const { nextNodeKey } = currentNode.content
@@ -456,7 +520,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
               await currentNode.systemDecide();
-              await this.save(currentNode);
+              await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
               const { nextNodeKey } = currentNode.content

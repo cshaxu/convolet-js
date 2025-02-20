@@ -17,14 +17,18 @@ declare enum FlowStatus {
 }
 type NextNodeOption = {
     nodeKey: string;
-    prompt: string | null;
+    prompt: string;
+};
+type OutputParam = {
+    name: string;
+    path: string[] | string;
 };
 type BaseNodeConfig = {
     nodeType: NodeType;
     nodeKey: string;
     inputParams: string[];
-    outputParam: string;
-    nextNodeOptions: NextNodeOption[];
+    outputParams: string | (string | OutputParam)[];
+    nextNodeOptions: string | string[] | NextNodeOption[];
 };
 type InteractionNodeConfig = BaseNodeConfig & {
     nodeType: NodeType.INTERACTION;
@@ -43,17 +47,17 @@ type FlowConfig = {
     endNodeKey: string;
 };
 type DataObject = Record<string, any>;
+type NodeInput = DataObject;
 type InteractionNodeOutput = {
     botStreamed?: string;
     userInput?: string;
 };
-type EvaluationNodeOutput = DataObject | DataObject[];
+type EvaluationNodeOutput = DataObject;
 type DecisionNodeOutput = {
     nextNodeKey: string;
     reason: string | null;
 };
 type NodeOutput = InteractionNodeOutput | EvaluationNodeOutput | DecisionNodeOutput;
-type NodeInput = Record<string, NodeOutput>;
 type NodeContent = {
     type: NodeType;
     key: string;
@@ -61,9 +65,13 @@ type NodeContent = {
     index: number;
     output: NodeOutput | null;
 };
+type SymbolRef = {
+    nodeIndex: number;
+    path: string[];
+};
 type FlowMemory = {
     initial: NodeOutput | null;
-    symbols: Record<string, number>;
+    symbolRefs: Record<string, SymbolRef>;
 };
 type FlowContent = {
     id: string;
@@ -93,4 +101,4 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Promise<NodeOutput>;
     streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
 };
-export { Adapter, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowMemory, FlowRunParams, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SystemEvaluator, };
+export { Adapter, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowMemory, FlowRunParams, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SymbolRef, SystemEvaluator, };

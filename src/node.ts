@@ -227,14 +227,25 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
 
     // decide
     const { nextNodeOptions } = this.config;
+    const promptedNextNodeOptions =
+      typeof nextNodeOptions === "string"
+        ? []
+        : nextNodeOptions.filter((option) => typeof option !== "string");
     const fullNextNodeKeyPrompt = buildFullNextNodeKeyPrompt(
-      nextNodeOptions,
+      promptedNextNodeOptions,
       this.input
     );
     this.content.output =
-      nextNodeOptions.length === 1
-        ? { nextNodeKey: nextNodeOptions[0].nodeKey }
-        : nextNodeOptions.length > 1
+      typeof nextNodeOptions === "string"
+        ? { nextNodeKey: nextNodeOptions }
+        : nextNodeOptions.length === 1
+        ? {
+            nextNodeKey:
+              typeof nextNodeOptions[0] === "string"
+                ? nextNodeOptions[0]
+                : nextNodeOptions[0].nodeKey,
+          }
+        : promptedNextNodeOptions.length > 0
         ? await this.adapter
             .jsonChat(
               fullNextNodeKeyPrompt,
@@ -256,8 +267,15 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     // decide
     const { nextNodeOptions } = this.config;
     this.content.output =
-      nextNodeOptions.length === 1
-        ? { nextNodeKey: nextNodeOptions[0].nodeKey }
+      typeof nextNodeOptions === "string"
+        ? { nextNodeKey: nextNodeOptions }
+        : nextNodeOptions.length === 1
+        ? {
+            nextNodeKey:
+              typeof nextNodeOptions[0] === "string"
+                ? nextNodeOptions[0]
+                : nextNodeOptions[0].nodeKey,
+          }
         : this.executor !== null && nextNodeOptions.length > 1
         ? await this.executor(this.content)
         : { nextNodeKey: "" };

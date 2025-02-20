@@ -37,8 +37,10 @@ type NextNodeOption = {
   // key to enter the next node
   nodeKey: string;
   // prompt for bot to decide whether to take this option
-  prompt: string | null;
+  prompt: string;
 };
+
+type OutputParam = { name: string; path: string[] | string };
 
 type BaseNodeConfig = {
   // type of node config
@@ -48,9 +50,9 @@ type BaseNodeConfig = {
   // input param names
   inputParams: string[];
   // output name
-  outputParam: string;
+  outputParams: string | (string | OutputParam)[];
   // option to move forward to next node
-  nextNodeOptions: NextNodeOption[];
+  nextNodeOptions: string | string[] | NextNodeOption[];
 };
 
 type InteractionNodeConfig = BaseNodeConfig & {
@@ -87,12 +89,11 @@ type FlowConfig = {
 
 type DataObject = Record<string, any>;
 
-type InteractionNodeOutput = {
-  botStreamed?: string;
-  userInput?: string;
-};
+type NodeInput = DataObject;
 
-type EvaluationNodeOutput = DataObject | DataObject[];
+type InteractionNodeOutput = { botStreamed?: string; userInput?: string };
+
+type EvaluationNodeOutput = DataObject;
 
 type DecisionNodeOutput = { nextNodeKey: string; reason: string | null };
 
@@ -100,8 +101,6 @@ type NodeOutput =
   | InteractionNodeOutput
   | EvaluationNodeOutput
   | DecisionNodeOutput;
-
-type NodeInput = Record<string, NodeOutput>;
 
 type NodeContent = {
   // node type to identify the fields of the node content
@@ -117,11 +116,13 @@ type NodeContent = {
   output: NodeOutput | null;
 };
 
+type SymbolRef = { nodeIndex: number; path: string[] };
+
 type FlowMemory = {
   // initial input data for the flow, variable name is 'initial'
   initial: NodeOutput | null;
-  // symbol table to map variable name to node index
-  symbols: Record<string, number>;
+  // symbol table to map variable name to node index or value
+  symbolRefs: Record<string, SymbolRef>;
 };
 
 type FlowContent = {
@@ -191,5 +192,6 @@ export {
   NodeOutput,
   NodeStatus,
   NodeType,
+  SymbolRef,
   SystemEvaluator,
 };
