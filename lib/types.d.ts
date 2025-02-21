@@ -71,7 +71,7 @@ type SymbolRef = {
     path: string[];
 };
 type FlowMemory = {
-    initial: NodeOutput | null;
+    initial: NodeInput;
     symbolRefs: Record<string, SymbolRef>;
 };
 type FlowContent = {
@@ -85,8 +85,8 @@ type Message = {
     content: string;
 };
 type SystemEvaluator = (input: NodeInput, nodeContent: NodeContent, nodeConfig: NodeConfig) => Awaitable<NodeOutput>;
-type FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
-    userInput?: string;
+type FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
+    systemEvaluator?: SystemEvaluator;
     jsonChatOptions?: JSON_CHAT_OPTIONS;
     streamChatOptions?: STREAM_CHAT_OPTIONS;
 };
@@ -102,4 +102,4 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Promise<NodeOutput>;
     streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
 };
-export { Adapter, Awaitable, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowMemory, FlowRunParams, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SymbolRef, SystemEvaluator, };
+export { Adapter, Awaitable, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowMemory, FlowOptions, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SymbolRef, SystemEvaluator, };

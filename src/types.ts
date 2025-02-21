@@ -123,7 +123,7 @@ type SymbolRef = { nodeIndex: number; path: string[] };
 
 type FlowMemory = {
   // initial input data for the flow, variable name is 'initial'
-  initial: NodeOutput | null;
+  initial: NodeInput;
   // symbol table to map variable name to node index or value
   symbolRefs: Record<string, SymbolRef>;
 };
@@ -149,8 +149,8 @@ type SystemEvaluator = (
   nodeConfig: NodeConfig
 ) => Awaitable<NodeOutput>;
 
-type FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
-  userInput?: string;
+type FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
+  systemEvaluator?: SystemEvaluator;
   jsonChatOptions?: JSON_CHAT_OPTIONS;
   streamChatOptions?: STREAM_CHAT_OPTIONS;
 };
@@ -188,7 +188,7 @@ export {
   FlowConfig,
   FlowContent,
   FlowMemory,
-  FlowRunParams,
+  FlowOptions,
   FlowStatus,
   InteractionNodeConfig,
   InteractionNodeOutput,

@@ -1,11 +1,11 @@
-import { Adapter, Message, NodeConfig, NodeContent, NodeInput, NodeStatus, SystemEvaluator } from "./types";
+import { Adapter, Awaitable, Message, NodeConfig, NodeContent, NodeInput, NodeStatus, SystemEvaluator } from "./types";
 declare class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     config: NodeConfig;
     content: NodeContent;
-    private input;
-    private systemEvaluator;
+    input: NodeInput;
     private adapter;
-    constructor(config: NodeConfig, content: NodeContent, input: NodeInput, systemEvaluator: SystemEvaluator | null, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>);
+    private systemEvaluator?;
+    constructor(config: NodeConfig, content: NodeContent, input: NodeInput, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>, systemEvaluator?: SystemEvaluator);
     private isInteractionNodeOrThrow;
     private isBotEvaluationNodeOrThrow;
     private isSystemEvaluationNodeOrThrow;
@@ -14,7 +14,7 @@ declare class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
     getStatus(): NodeStatus;
     private isInitiatedOrThrow;
     private isProcessingOrThrow;
-    interactBotStream(messages: Message[], options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
+    interactBotStream(messages: Message[], onStreamDone: (text: string) => Awaitable<void>, options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
     interactUserInput(userInput: string): Promise<void>;
     botEvaluate(jsonChatOptions?: JSON_CHAT_OPTIONS): Promise<void>;
     systemEvaluate(): Promise<void>;

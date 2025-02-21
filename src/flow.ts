@@ -1,11 +1,12 @@
 import { Node } from "./node";
 import {
   Adapter,
+  Awaitable,
   DecisionNodeOutput,
   FlowConfig,
   FlowContent,
   FlowMemory,
-  FlowRunParams,
+  FlowOptions,
   FlowStatus,
   InteractionNodeOutput,
   Message,
@@ -32,8 +33,16 @@ import { toObjectMap } from "./utils";
 // - decision node must have at least one next node option
 // - flow can be created with initial memory data
 
-function throwError(flowKey: string, message: string): void {
-  throw new Error(`FlowConfig (${flowKey}): ${message}`);
+function buildConfigErrorMessage(flowKey: string, message: string): string {
+  return `FlowConfig (${flowKey}): ${message}`;
+}
+
+function buildContentErrorMessage(
+  content: FlowContent,
+  message: string
+): string {
+  const objectId = [content.key, content.id].join("-");
+  return `Flow (${objectId}): ${message}`;
 }
 
 function getOnlyNextNodeKey(
@@ -52,13 +61,20 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
   // validate start node config
   const startNodeConfig = nodes.find((nc) => nc.nodeKey === startNodeKey);
   if (startNodeConfig === undefined) {
-    throwError(flowKey, `missing start node config (${startNodeKey})`);
+    new Error(
+      buildConfigErrorMessage(
+        flowKey,
+        `missing start node config (${startNodeKey})`
+      )
+    );
   }
 
   // validate end node config
   const endNodeConfig = nodes.find((nc) => nc.nodeKey === endNodeKey);
   if (endNodeConfig === undefined) {
-    throwError(flowKey, `missing end NodeConfig (${endNodeKey})`);
+    new Error(
+      buildConfigErrorMessage(flowKey, `missing end NodeConfig (${endNodeKey})`)
+    );
   }
 
   nodes.forEach((nodeConfig) => {
@@ -71,9 +87,11 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
           (nc) => nc.nodeKey === nextNodeOptions
         );
         if (nextNodeConfig === undefined) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeOptions})`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeOptions})`
+            )
           );
         }
       }
@@ -82,9 +100,11 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
         const nextNodeKey = typeof nno === "string" ? nno : nno.nodeKey;
         const nextNodeConfig = nodes.find((nc) => nc.nodeKey === nextNodeKey);
         if (nextNodeConfig === undefined) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): missing input NodeConfig (${nextNodeKey})`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): missing input NodeConfig (${nextNodeKey})`
+            )
           );
         }
       });
@@ -93,35 +113,43 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
     switch (nodeType) {
       case NodeType.INTERACTION:
         if (isEndNode) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): must be an evaluation node as end node`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): must be an evaluation node as end node`
+            )
           );
         }
         if (
           typeof nextNodeOptions !== "string" &&
           nextNodeOptions.length !== 1
         ) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): must have exactly one next node option`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): must have exactly one next node option`
+            )
           );
         }
         const nextNodeKey = getOnlyNextNodeKey(nextNodeOptions);
         const nextNodeConfig = nodes.find((nc) => nc.nodeKey === nextNodeKey);
         if (nextNodeConfig === undefined) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeKey})`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): missing next NodeConfig (${nextNodeKey})`
+            )
           );
         }
         break;
       case NodeType.BOT_EVALUATION:
       case NodeType.SYSTEM_EVALUATION:
         if (isEndNode && nodeConfig.nextNodeOptions.length !== 0) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): must not have next node options as end node`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): must not have next node options as end node`
+            )
           );
         }
         if (
@@ -129,24 +157,30 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
           typeof nodeConfig.nextNodeOptions !== "string" &&
           nodeConfig.nextNodeOptions.length !== 1
         ) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): missing next node options`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): missing next node options`
+            )
           );
         }
         break;
       case NodeType.BOT_DECISION:
       case NodeType.SYSTEM_DECISION:
         if (isEndNode) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): must be an evaluation node as end node`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): must be an evaluation node as end node`
+            )
           );
         }
         if (nodeConfig.nextNodeOptions.length === 0) {
-          throwError(
-            flowKey,
-            `NodeConfig (${nodeKey}): missing next node options`
+          new Error(
+            buildConfigErrorMessage(
+              flowKey,
+              `NodeConfig (${nodeKey}): missing next node options`
+            )
           );
         }
         break;
@@ -155,7 +189,7 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
 }
 
 function buildInput(
-  flowId: string,
+  flowContent: FlowContent,
   index: number,
   nodeContentByIndex: Map<number, NodeContent>,
   nodeConfigByNodeKey: Map<string, NodeConfig>,
@@ -165,26 +199,35 @@ function buildInput(
 
   // validate
   if (currentContent === undefined) {
-    throwError(flowId, `missing current node content for index (${index})`);
+    new Error(
+      buildContentErrorMessage(flowContent, `missing NodeContent (${index})`)
+    );
     return {};
   }
   const currentConfig = nodeConfigByNodeKey.get(currentContent.key);
   if (currentConfig === undefined) {
-    throwError(
-      flowId,
-      `missing current node config for key (${currentContent.key})`
+    new Error(
+      buildContentErrorMessage(
+        flowContent,
+        `missing NodeConfig (${currentContent.key})`
+      )
     );
     return {};
   }
+
+  // retrieve
   return currentConfig.inputParams.reduce((acc, param) => {
-    if (param === "initial" && memory.initial !== null) {
-      acc[param] = memory.initial;
-      // this can be overwritten so we are not returning here
-    }
     const symbolRef = memory.symbolRefs[param];
+
     if (symbolRef === undefined) {
+      // fallback to initial input
+      const value = memory.initial[param];
+      if (value !== undefined) {
+        acc[param] = value;
+      }
       return acc;
     }
+
     const { nodeIndex, path } = symbolRef;
     const inputNode = nodeContentByIndex.get(nodeIndex);
     const input = inputNode?.output ?? undefined;
@@ -199,31 +242,17 @@ function buildInput(
   }, {} as NodeInput);
 }
 
-function setSymbolRef(
-  flowContent: FlowContent,
-  name: string,
-  nodeIndex: number,
-  path: string[]
-): boolean {
-  if (name.trim().length > 0) {
-    flowContent.memory.symbolRefs[name] = {
-      nodeIndex,
-      path,
-    };
-    return true;
-  }
-  return false;
-}
-
 class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   content: FlowContent;
   nodes: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>[];
-  systemEvaluator: SystemEvaluator | null;
   adapter: Adapter<
     JSON_CHAT_OPTIONS,
     STREAM_CHAT_OPTIONS,
     STREAM_CHAT_RESPONSE
   >;
+  jsonChatOptions?: JSON_CHAT_OPTIONS;
+  streamChatOptions?: STREAM_CHAT_OPTIONS;
+  systemEvaluator?: SystemEvaluator;
 
   public static async get<
     JSON_CHAT_OPTIONS,
@@ -231,19 +260,19 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     STREAM_CHAT_RESPONSE
   >(
     id: string,
-    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
-    >
+    >,
+    options: FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {}
   ): Promise<
     Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   > {
     const content = await adapter.getFlow(id);
     validateFlowConfig(content.config);
     const nodeContents = await adapter.getNodes(id);
-    return new Flow(content, nodeContents, systemEvaluator, adapter);
+    return new Flow(content, nodeContents, adapter, options);
   }
 
   public static async create<
@@ -252,13 +281,13 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     STREAM_CHAT_RESPONSE
   >(
     config: FlowConfig,
-    initialInput: NodeOutput | null,
-    systemEvaluator: SystemEvaluator | null,
+    initialInput: NodeInput,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
-    >
+    >,
+    options: FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {}
   ): Promise<
     Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   > {
@@ -267,24 +296,18 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       initial: initialInput,
       symbolRefs: {},
     });
-    return new Flow(content, [], systemEvaluator, adapter);
-  }
-
-  public async delete(): Promise<number> {
-    const count = await this.adapter.deleteNodes(this.content.id);
-    await this.adapter.deleteFlow(this.content.id);
-    return count + 1;
+    return new Flow(content, [], adapter, options);
   }
 
   private constructor(
     content: FlowContent,
     nodeContents: NodeContent[],
-    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
-    >
+    >,
+    options: FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>
   ) {
     this.content = content;
     const nodeConfigByNodeKey = toObjectMap(
@@ -298,23 +321,33 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       (nc) => nc
     );
 
+    const { jsonChatOptions, streamChatOptions, systemEvaluator } = options;
+
     this.nodes = nodeContents
       .sort((a, b) => a.index - b.index)
       .filter((nc) => nodeConfigByNodeKey.has(nc.key))
       .map((nc) => {
         const nodeConfig = nodeConfigByNodeKey.get(nc.key)!;
         const input = buildInput(
-          nc.flowId,
+          content,
           nc.index,
           nodeContentByIndex,
           nodeConfigByNodeKey,
           this.content.memory
         );
-        return new Node(nodeConfig, nc, input, systemEvaluator, adapter);
+        return new Node(nodeConfig, nc, input, adapter, systemEvaluator);
       });
 
-    this.systemEvaluator = systemEvaluator;
     this.adapter = adapter;
+    this.jsonChatOptions = jsonChatOptions;
+    this.streamChatOptions = streamChatOptions;
+    this.systemEvaluator = systemEvaluator;
+  }
+
+  public async delete(): Promise<number> {
+    const count = await this.adapter.deleteNodes(this.content.id);
+    await this.adapter.deleteFlow(this.content.id);
+    return count + 1;
   }
 
   public getStatus(): FlowStatus {
@@ -337,7 +370,9 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   > {
     if (this.getStatus() !== FlowStatus.INITIATED) {
-      throw new Error(`Flow (${this.content.id}): already started`);
+      throw new Error(
+        buildContentErrorMessage(this.content, "already started")
+      );
     }
     return await this.next(this.content.config.startNodeKey);
   }
@@ -356,7 +391,10 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     const nodeConfig = nodeConfigByNodeKey.get(nodeKey);
     if (nodeConfig === undefined) {
       throw new Error(
-        `Flow (${this.content.id}): missing NodeConfig (${nodeKey})`
+        buildContentErrorMessage(
+          this.content,
+          `missing NodeConfig (${nodeKey})`
+        )
       );
     }
 
@@ -377,7 +415,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       (nc) => nc
     );
     const input = buildInput(
-      nodeContent.flowId,
+      this.content,
       nodeContent.index,
       nodeContentByIndex,
       nodeConfigByNodeKey,
@@ -387,8 +425,8 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       nodeConfig,
       nodeContent,
       input,
-      this.systemEvaluator,
-      this.adapter
+      this.adapter,
+      this.systemEvaluator
     );
     this.nodes.push(node);
     return node;
@@ -398,34 +436,23 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     node: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   ): Promise<void> {
     const { outputParams } = node.config;
+    const { index: nodeIndex } = node.content;
     let shouldUpdateMemory = false;
     if (typeof outputParams === "string") {
-      shouldUpdateMemory ||= setSymbolRef(
-        this.content,
-        outputParams,
-        node.content.index,
-        []
-      );
+      this.content.memory.symbolRefs[outputParams] = { nodeIndex, path: [] };
+      shouldUpdateMemory = true;
     } else if (Array.isArray(outputParams)) {
       outputParams.forEach((p) => {
         if (typeof p === "string") {
-          shouldUpdateMemory ||= setSymbolRef(
-            this.content,
-            p,
-            node.content.index,
-            [p]
-          );
+          this.content.memory.symbolRefs[p] = { nodeIndex, path: [p] };
+          shouldUpdateMemory = true;
         } else if (typeof p === "object") {
           const { name, path } = p;
           const pathParts = Array.isArray(path)
             ? path
             : path.split(".").filter((s) => s.length > 0);
-          shouldUpdateMemory ||= setSymbolRef(
-            this.content,
-            name,
-            node.content.index,
-            pathParts
-          );
+          this.content.memory.symbolRefs[name] = { nodeIndex, path: pathParts };
+          shouldUpdateMemory = true;
         }
       });
     }
@@ -435,10 +462,9 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   }
 
   // run the flow by executing nodes one by one until the one that requires user input or the end nodes
-  public async run(
-    params: FlowRunParams<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>
-  ): Promise<STREAM_CHAT_RESPONSE | null> {
-    const { userInput, streamChatOptions, jsonChatOptions } = params;
+  // if it returns the Nodeoutput, it means the flow is completed
+  // if it returns null, it means the flow hits a streaming node
+  public async run(userInput?: string): Promise<NodeOutput | null> {
     let currentNode = this.nodes.at(-1) ?? (await this.start());
     do {
       const { config: nodeConfig } = currentNode;
@@ -449,28 +475,17 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
         case NodeType.INTERACTION:
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
-              const messages: Message[] = this.nodes
-                .filter((n) => n.getStatus() !== NodeStatus.INITIATED)
-                .map((n) => n.content)
-                .filter((nc) => nc.type === NodeType.INTERACTION)
-                .filter((nc) => nc.output !== null)
-                .map((nc) => nc.output as InteractionNodeOutput)
-                .flatMap((output) => [
-                  ...(output.botStreamed !== undefined
-                    ? [{ role: "BOT" as const, content: output.botStreamed }]
-                    : []),
-                  ...(output.userInput !== undefined
-                    ? [{ role: "USER" as const, content: output.userInput }]
-                    : []),
-                ]);
-              return await currentNode.interactBotStream(
-                messages,
-                streamChatOptions
-              );
+              return null;
             case NodeStatus.PROCESSING:
-              await currentNode.interactUserInput(
-                userInput ?? "userInput is not provided"
-              );
+              if (userInput === undefined) {
+                throw new Error(
+                  buildContentErrorMessage(
+                    this.content,
+                    `userInput is not provided`
+                  )
+                );
+              }
+              await currentNode.interactUserInput(userInput);
               await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
@@ -480,19 +495,22 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               break;
             default:
               throw new Error(
-                `Flow (${this.content.id}): invalid node status (${nodeStatus})`
+                buildContentErrorMessage(
+                  this.content,
+                  `invalid NodeStatus (${nodeStatus})`
+                )
               );
           }
           break;
         case NodeType.BOT_EVALUATION:
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
-              await currentNode.botEvaluate(jsonChatOptions);
+              await currentNode.botEvaluate(this.jsonChatOptions);
               await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
               if (nodeConfig.nextNodeOptions.length === 0) {
-                return null;
+                return currentNode.content.output;
               }
               currentNode = await this.next(
                 getOnlyNextNodeKey(nextNodeOptions)
@@ -500,7 +518,10 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               break;
             default:
               throw new Error(
-                `Flow (${this.content.id}): invalid node status (${nodeStatus})`
+                buildContentErrorMessage(
+                  this.content,
+                  `invalid NodeStatus (${nodeStatus})`
+                )
               );
           }
           break;
@@ -512,7 +533,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               break;
             case NodeStatus.COMPLETED:
               if (nodeConfig.nextNodeOptions.length === 0) {
-                return null;
+                return currentNode.content.output;
               }
               currentNode = await this.next(
                 getOnlyNextNodeKey(nextNodeOptions)
@@ -520,14 +541,17 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               break;
             default:
               throw new Error(
-                `Flow (${this.content.id}): invalid node status (${nodeStatus})`
+                buildContentErrorMessage(
+                  this.content,
+                  `invalid NodeStatus (${nodeStatus})`
+                )
               );
           }
           break;
         case NodeType.BOT_DECISION:
           switch (nodeStatus) {
             case NodeStatus.INITIATED:
-              await currentNode.botDecide(jsonChatOptions);
+              await currentNode.botDecide(this.jsonChatOptions);
               await this.updateSymbols(currentNode);
               break;
             case NodeStatus.COMPLETED:
@@ -537,7 +561,10 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               break;
             default:
               throw new Error(
-                `Flow (${this.content.id}): invalid node status (${nodeStatus})`
+                buildContentErrorMessage(
+                  this.content,
+                  `invalid NodeStatus (${nodeStatus})`
+                )
               );
           }
           break;
@@ -554,16 +581,68 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               break;
             default:
               throw new Error(
-                `Flow (${this.content.id}): invalid node status (${nodeStatus})`
+                buildContentErrorMessage(
+                  this.content,
+                  `invalid NodeStatus (${nodeStatus})`
+                )
               );
           }
           break;
         default:
           throw new Error(
-            `Flow (${this.content.id}): invalid node type (${nodeType})`
+            buildContentErrorMessage(
+              this.content,
+              `invalid NodeType (${nodeType})`
+            )
           );
       }
     } while (true);
+  }
+
+  public async stream(
+    onStreamDone: (text: string) => Awaitable<void>,
+    streamChatOptions?: STREAM_CHAT_OPTIONS
+  ): Promise<STREAM_CHAT_RESPONSE> {
+    const currentNode = this.nodes.at(-1);
+    if (currentNode === undefined) {
+      throw new Error(
+        buildContentErrorMessage(this.content, "flow is not started yet")
+      );
+    }
+
+    const { nodeType } = currentNode.config;
+    const nodeStatus = currentNode.getStatus();
+
+    if (
+      nodeType !== NodeType.INTERACTION ||
+      nodeStatus !== NodeStatus.INITIATED
+    ) {
+      throw new Error(
+        buildContentErrorMessage(
+          this.content,
+          `flow is not in streaming state (${nodeStatus})`
+        )
+      );
+    }
+    const messages: Message[] = this.nodes
+      .filter((n) => n.getStatus() !== NodeStatus.INITIATED)
+      .map((n) => n.content)
+      .filter((nc) => nc.type === NodeType.INTERACTION)
+      .filter((nc) => nc.output !== null)
+      .map((nc) => nc.output as InteractionNodeOutput)
+      .flatMap((output) => [
+        ...(output.botStreamed !== undefined
+          ? [{ role: "BOT" as const, content: output.botStreamed }]
+          : []),
+        ...(output.userInput !== undefined
+          ? [{ role: "USER" as const, content: output.userInput }]
+          : []),
+      ]);
+    return await currentNode.interactBotStream(
+      messages,
+      onStreamDone,
+      streamChatOptions
+    );
   }
 }
 

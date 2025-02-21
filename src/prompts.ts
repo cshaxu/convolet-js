@@ -5,13 +5,13 @@ const hasInput = (input: NodeInput): boolean => Object.keys(input).length > 0;
 const buildFullPrompt = (prompt: string, input: NodeInput): string =>
   [
     ...(hasInput(input)
-      ? []
-      : [
+      ? [
           "--- INPUT DATA BEGINS ---",
           JSON.stringify(input),
           "--- INPUT DATA ENDS ---",
           "",
-        ]),
+        ]
+      : []),
     prompt,
   ].join("\n");
 

@@ -8,7 +8,7 @@ const singleNodeFlowConfig: FlowConfig = {
     {
       nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "start",
-      inputParams: ["initial"],
+      inputParams: [],
       outputParams: "data",
       nextNodeOptions: [],
       prompt: "Find out the year IBM was founded.",
@@ -25,10 +25,10 @@ const twoEvaluationNodeFlowConfig: FlowConfig = {
     {
       nodeType: NodeType.BOT_EVALUATION,
       nodeKey: "start",
-      inputParams: ["initial"],
+      inputParams: ["year"],
       outputParams: [{ name: "data", path: "" }],
       nextNodeOptions: "end",
-      prompt: "Find out the year IBM was founded.",
+      prompt: "Find out whether the year is a leap year.",
       schema: "{ year: number; isLeapYear: boolean }",
     },
     {
@@ -53,7 +53,7 @@ const questionEvaluationFlowConfig: FlowConfig = {
     {
       nodeType: NodeType.INTERACTION,
       nodeKey: "start",
-      inputParams: ["initial"],
+      inputParams: [],
       outputParams: ["userInput"],
       nextNodeOptions: ["end"],
       prompt: "Ask the user for their birthday",

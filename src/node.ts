@@ -5,6 +5,7 @@ import {
 } from "./prompts";
 import {
   Adapter,
+  Awaitable,
   BotEvaluationNodeConfig,
   DecisionNodeOutput,
   InteractionNodeConfig,
@@ -21,88 +22,82 @@ import {
 type Primitive = string | number | boolean;
 
 function buildErrorMessage(
-  objectId: Primitive,
-  fieldName: string,
-  expected: Primitive,
-  got: Primitive
-): string {
-  return `Node ${objectId}: "${fieldName}", expected "${expected.toString()}", got "${got.toString()}"`;
-}
-
-function throwError(
   content: NodeContent,
   fieldName: string,
   expected: Primitive,
   got: Primitive
-): void {
-  throw new Error(
-    buildErrorMessage(
-      [content.flowId, content.index, content.key].join("-"),
-      fieldName,
-      expected,
-      got
-    )
-  );
+): string {
+  const objectId = [content.key, content.flowId, content.index].join("-");
+  return `Node (${objectId}): "${fieldName}", expected "${expected.toString()}", got "${got.toString()}"`;
 }
 
 class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   public config: NodeConfig;
   public content: NodeContent;
+  public input: NodeInput;
 
-  private input: NodeInput;
-
-  private systemEvaluator: SystemEvaluator | null;
   private adapter: Adapter<
     JSON_CHAT_OPTIONS,
     STREAM_CHAT_OPTIONS,
     STREAM_CHAT_RESPONSE
   >;
+  private systemEvaluator?: SystemEvaluator;
 
   constructor(
     config: NodeConfig,
     content: NodeContent,
     input: NodeInput,
-    systemEvaluator: SystemEvaluator | null,
     adapter: Adapter<
       JSON_CHAT_OPTIONS,
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
-    >
+    >,
+    systemEvaluator?: SystemEvaluator
   ) {
     this.config = config;
     this.content = content;
     this.input = input;
-    this.systemEvaluator = systemEvaluator;
     this.adapter = adapter;
+    this.systemEvaluator = systemEvaluator;
   }
 
   private isInteractionNodeOrThrow(): void {
     if (this.content.type !== NodeType.INTERACTION) {
-      throwError(this.content, "isInteractionNode", true, false);
+      throw new Error(
+        buildErrorMessage(this.content, "isInteractionNode", true, false)
+      );
     }
   }
 
   private isBotEvaluationNodeOrThrow(): void {
     if (this.content.type !== NodeType.BOT_EVALUATION) {
-      throwError(this.content, "isBotEvaluation", true, false);
+      throw new Error(
+        buildErrorMessage(this.content, "isBotEvaluation", true, false)
+      );
     }
   }
 
   private isSystemEvaluationNodeOrThrow(): void {
     if (this.content.type !== NodeType.SYSTEM_EVALUATION) {
-      throwError(this.content, "isSystemEvaluation", true, false);
+      throw new Error(
+        buildErrorMessage(this.content, "isSystemEvaluation", true, false)
+      );
     }
   }
 
   private isBotDecisionNodeOrThrow(): void {
     if (this.content.type !== NodeType.BOT_DECISION) {
-      throwError(this.content, "isBotDecision", true, false);
+      throw new Error(
+        buildErrorMessage(this.content, "isBotDecision", true, false)
+      );
     }
   }
 
   private isSystemDecisionNodeOrThrow(): void {
     if (this.content.type !== NodeType.SYSTEM_DECISION) {
-      throwError(this.content, "isSystemDecision", true, false);
+      throw new Error(
+        buildErrorMessage(this.content, "isSystemDecision", true, false)
+      );
     }
   }
 
@@ -125,28 +120,33 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
 
   private isInitiatedOrThrow(): void {
     if (this.getStatus() !== NodeStatus.INITIATED) {
-      throwError(
-        this.content,
-        "status",
-        NodeStatus.INITIATED,
-        this.getStatus()
+      throw new Error(
+        buildErrorMessage(
+          this.content,
+          "status",
+          NodeStatus.INITIATED,
+          this.getStatus()
+        )
       );
     }
   }
 
   private isProcessingOrThrow(): void {
     if (this.getStatus() !== NodeStatus.PROCESSING) {
-      throwError(
-        this.content,
-        "status",
-        NodeStatus.PROCESSING,
-        this.getStatus()
+      throw new Error(
+        buildErrorMessage(
+          this.content,
+          "status",
+          NodeStatus.PROCESSING,
+          this.getStatus()
+        )
       );
     }
   }
 
   public async interactBotStream(
     messages: Message[],
+    onStreamDone: (text: string) => Awaitable<void>,
     options?: STREAM_CHAT_OPTIONS
   ): Promise<STREAM_CHAT_RESPONSE> {
     // validate
@@ -164,18 +164,19 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     );
 
     // persist
-    const onStreamDone = async (generated: string) => {
+    const callback = async (generated: string) => {
       this.content.output = {
         ...(this.content.output ?? {}),
         botStreamed: generated,
       };
       await this.adapter.updateNode(this.content);
+      await onStreamDone(generated);
     };
 
     return await this.adapter.streamChat(
       fullStreamPrompt,
       messages,
-      onStreamDone,
+      callback,
       options
     );
   }
@@ -214,7 +215,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
 
     // evaluate
     this.content.output =
-      this.systemEvaluator === null
+      this.systemEvaluator === undefined
         ? {}
         : await this.systemEvaluator(this.input, this.content, this.config);
 
@@ -278,7 +279,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
                 ? nextNodeOptions[0]
                 : nextNodeOptions[0].nodeKey,
           }
-        : this.systemEvaluator !== null && nextNodeOptions.length > 1
+        : this.systemEvaluator !== undefined && nextNodeOptions.length > 1
         ? await this.systemEvaluator(this.input, this.content, this.config)
         : { nextNodeKey: "" };
 
