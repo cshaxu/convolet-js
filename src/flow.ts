@@ -5,8 +5,9 @@ import {
   DecisionNodeOutput,
   FlowConfig,
   FlowContent,
+  FlowExecOptions,
+  FlowInitOptions,
   FlowMemory,
-  FlowOptions,
   FlowStatus,
   InteractionNodeOutput,
   Message,
@@ -265,7 +266,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
     >,
-    options: FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {}
+    options: FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {}
   ): Promise<
     Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   > {
@@ -287,7 +288,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
     >,
-    options: FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {}
+    options: FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {}
   ): Promise<
     Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
   > {
@@ -307,7 +308,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
     >,
-    options: FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>
+    options: FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>
   ) {
     this.content = content;
     const nodeConfigByNodeKey = toObjectMap(
@@ -461,132 +462,46 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     }
   }
 
-  // run the flow by executing nodes one by one until the one that requires user input or the end nodes
-  // if it returns the Nodeoutput, it means the flow is completed
-  // if it returns null, it means the flow hits a streaming node
-  public async run(userInput?: string): Promise<NodeOutput | null> {
-    let currentNode = this.nodes.at(-1) ?? (await this.start());
+  // run the entire flow continuously until the end or hitting streaming state
+  // flow completed normally: return NodeOutput
+  // flow awaiting user input: return null and you should call stream() next
+  public async run(options?: FlowExecOptions): Promise<NodeOutput | null> {
+    let result = null;
     do {
-      const { config: nodeConfig } = currentNode;
-      const { nodeType, nextNodeOptions } = nodeConfig;
-      const nodeStatus = currentNode.getStatus();
+      result = await this.step(options);
+    } while (result !== null && this.getStatus() !== FlowStatus.COMPLETED);
+    return result;
+  }
 
+  // execute one step of the flow
+  // step completed normally: return NodeOutput
+  // step awaiting user input: return null and you should call stream() next
+  public async step(options?: FlowExecOptions): Promise<NodeOutput | null> {
+    const { userInput, callBefore, callAfter } = options ?? {};
+    const currentNode = this.nodes.at(-1) ?? (await this.start());
+
+    if (callBefore !== undefined) {
+      await callBefore(currentNode.content);
+    }
+
+    const nodeStatus = currentNode.getStatus();
+    const { nodeType, nextNodeOptions } = currentNode.config;
+
+    if (nodeStatus === NodeStatus.INITIATED) {
       switch (nodeType) {
         case NodeType.INTERACTION:
-          switch (nodeStatus) {
-            case NodeStatus.INITIATED:
-              return null;
-            case NodeStatus.PROCESSING:
-              if (userInput === undefined) {
-                throw new Error(
-                  buildContentErrorMessage(
-                    this.content,
-                    `userInput is not provided`
-                  )
-                );
-              }
-              await currentNode.interactUserInput(userInput);
-              await this.updateSymbols(currentNode);
-              break;
-            case NodeStatus.COMPLETED:
-              currentNode = await this.next(
-                getOnlyNextNodeKey(nextNodeOptions)
-              );
-              break;
-            default:
-              throw new Error(
-                buildContentErrorMessage(
-                  this.content,
-                  `invalid NodeStatus (${nodeStatus})`
-                )
-              );
-          }
-          break;
+          return null;
         case NodeType.BOT_EVALUATION:
-          switch (nodeStatus) {
-            case NodeStatus.INITIATED:
-              await currentNode.botEvaluate(this.jsonChatOptions);
-              await this.updateSymbols(currentNode);
-              break;
-            case NodeStatus.COMPLETED:
-              if (nodeConfig.nextNodeOptions.length === 0) {
-                return currentNode.content.output;
-              }
-              currentNode = await this.next(
-                getOnlyNextNodeKey(nextNodeOptions)
-              );
-              break;
-            default:
-              throw new Error(
-                buildContentErrorMessage(
-                  this.content,
-                  `invalid NodeStatus (${nodeStatus})`
-                )
-              );
-          }
+          await currentNode.botEvaluate(this.jsonChatOptions);
           break;
         case NodeType.SYSTEM_EVALUATION:
-          switch (nodeStatus) {
-            case NodeStatus.INITIATED:
-              await currentNode.systemEvaluate();
-              await this.updateSymbols(currentNode);
-              break;
-            case NodeStatus.COMPLETED:
-              if (nodeConfig.nextNodeOptions.length === 0) {
-                return currentNode.content.output;
-              }
-              currentNode = await this.next(
-                getOnlyNextNodeKey(nextNodeOptions)
-              );
-              break;
-            default:
-              throw new Error(
-                buildContentErrorMessage(
-                  this.content,
-                  `invalid NodeStatus (${nodeStatus})`
-                )
-              );
-          }
+          await currentNode.systemEvaluate();
           break;
         case NodeType.BOT_DECISION:
-          switch (nodeStatus) {
-            case NodeStatus.INITIATED:
-              await currentNode.botDecide(this.jsonChatOptions);
-              await this.updateSymbols(currentNode);
-              break;
-            case NodeStatus.COMPLETED:
-              const { nextNodeKey } = currentNode.content
-                .output as DecisionNodeOutput;
-              currentNode = await this.next(nextNodeKey);
-              break;
-            default:
-              throw new Error(
-                buildContentErrorMessage(
-                  this.content,
-                  `invalid NodeStatus (${nodeStatus})`
-                )
-              );
-          }
+          await currentNode.botDecide(this.jsonChatOptions);
           break;
         case NodeType.SYSTEM_DECISION:
-          switch (nodeStatus) {
-            case NodeStatus.INITIATED:
-              await currentNode.systemDecide();
-              await this.updateSymbols(currentNode);
-              break;
-            case NodeStatus.COMPLETED:
-              const { nextNodeKey } = currentNode.content
-                .output as DecisionNodeOutput;
-              currentNode = await this.next(nextNodeKey);
-              break;
-            default:
-              throw new Error(
-                buildContentErrorMessage(
-                  this.content,
-                  `invalid NodeStatus (${nodeStatus})`
-                )
-              );
-          }
+          await currentNode.systemDecide();
           break;
         default:
           throw new Error(
@@ -596,7 +511,60 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
             )
           );
       }
-    } while (true);
+    }
+
+    if (nodeStatus === NodeStatus.PROCESSING) {
+      const { index } = currentNode.content;
+      if (nodeType !== NodeType.INTERACTION) {
+        throw new Error(
+          buildContentErrorMessage(
+            this.content,
+            `Node (${index}): invalid NodeType (${nodeType}) for NodeStatus (${nodeStatus})`
+          )
+        );
+      }
+      if (userInput === undefined) {
+        throw new Error(
+          buildContentErrorMessage(this.content, `userInput is not provided`)
+        );
+      }
+      await currentNode.interactUserInput(userInput);
+    }
+
+    // after all nodes are executed, update the symbols
+    await this.updateSymbols(currentNode);
+
+    // now initialize the next node
+    switch (nodeType) {
+      case NodeType.INTERACTION:
+        await this.next(getOnlyNextNodeKey(nextNodeOptions));
+        break;
+      case NodeType.BOT_EVALUATION:
+      case NodeType.SYSTEM_EVALUATION:
+        if (nextNodeOptions.length > 0) {
+          await this.next(getOnlyNextNodeKey(nextNodeOptions));
+        }
+        break;
+      case NodeType.BOT_DECISION:
+      case NodeType.SYSTEM_DECISION:
+        const { nextNodeKey } = currentNode.content
+          .output as DecisionNodeOutput;
+        await this.next(nextNodeKey);
+        break;
+      default:
+        throw new Error(
+          buildContentErrorMessage(
+            this.content,
+            `invalid NodeType (${nodeType})`
+          )
+        );
+    }
+
+    if (callAfter !== undefined) {
+      await callAfter(currentNode.content);
+    }
+
+    return currentNode.content.output;
   }
 
   public async stream(
@@ -606,7 +574,10 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     const currentNode = this.nodes.at(-1);
     if (currentNode === undefined) {
       throw new Error(
-        buildContentErrorMessage(this.content, "flow is not started yet")
+        buildContentErrorMessage(
+          this.content,
+          "flow is not in streaming state yet"
+        )
       );
     }
 

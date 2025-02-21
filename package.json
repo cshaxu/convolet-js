@@ -1,7 +1,7 @@
 {
   "name": "convolet",
   "version": "0.0.0",
-  "description": "Chat-based AI workflow framework",
+  "description": "AI agent framework with human in the loop",
   "main": "./lib/index.js",
   "scripts": {
     "build": "rm -rf ./lib && tsc -p tsconfig.json"
@@ -15,8 +15,8 @@
     "workflow",
     "di-graph",
     "chat",
-    "ai",
-    "llm",
+    "ai agent",
+    "human in the loop",
     "application"
   ],
   "author": "cshaxu",

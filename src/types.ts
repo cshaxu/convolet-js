@@ -149,10 +149,16 @@ type SystemEvaluator = (
   nodeConfig: NodeConfig
 ) => Awaitable<NodeOutput>;
 
-type FlowOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
+type FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
   systemEvaluator?: SystemEvaluator;
   jsonChatOptions?: JSON_CHAT_OPTIONS;
   streamChatOptions?: STREAM_CHAT_OPTIONS;
+};
+
+type FlowExecOptions = {
+  userInput?: string;
+  callBefore?: (nodeContent: NodeContent) => Awaitable<void>;
+  callAfter?: (nodeContent: NodeContent) => Awaitable<void>;
 };
 
 type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
@@ -187,8 +193,9 @@ export {
   EvaluationNodeOutput,
   FlowConfig,
   FlowContent,
+  FlowExecOptions,
+  FlowInitOptions,
   FlowMemory,
-  FlowOptions,
   FlowStatus,
   InteractionNodeConfig,
   InteractionNodeOutput,
