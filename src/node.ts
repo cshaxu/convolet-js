@@ -256,7 +256,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
               jsonChatOptions
             )
             .then((r) => r as DecisionNodeOutput)
-        : { nextNodeKey: "" };
+        : { nextNodeKey: "invalid nextNodeOptions" };
 
     // persist
     await this.adapter.updateNode(this.content);
@@ -281,7 +281,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           }
         : this.systemEvaluator !== undefined && nextNodeOptions.length > 1
         ? await this.systemEvaluator(this.input, this.content, this.config)
-        : { nextNodeKey: "" };
+        : { nextNodeKey: "invald nextNodeOptions or systemEvaluator" };
 
     // persist
     await this.adapter.updateNode(this.content);
