@@ -80,12 +80,21 @@ type FlowContent = {
     config: FlowConfig;
     memory: FlowMemory;
 };
+type BotStreamPromptBuilder = (prompt: string, hasPreviousMessages: boolean, input: NodeInput) => string;
+type BotEvaluationPromptBuilder = (prompt: string, input: NodeInput) => string;
+type BotDecisionPromptBuilder = (nextNodeOptions: NextNodeOption[], input: NodeInput) => string;
+type PromptBuilders = {
+    botStream: BotStreamPromptBuilder;
+    botEvaluation: BotEvaluationPromptBuilder;
+    botDecision: BotDecisionPromptBuilder;
+};
 type Message = {
     role: "SYSTEM" | "BOT" | "USER";
     content: string;
 };
 type SystemEvaluator = (input: NodeInput, nodeContent: NodeContent, nodeConfig: NodeConfig) => Awaitable<NodeOutput>;
 type FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
+    promptBuilders?: PromptBuilders;
     systemEvaluator?: SystemEvaluator;
     jsonChatOptions?: JSON_CHAT_OPTIONS;
     streamChatOptions?: STREAM_CHAT_OPTIONS;
@@ -107,4 +116,4 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Promise<NodeOutput>;
     streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
 };
-export { Adapter, Awaitable, BaseNodeConfig, BotEvaluationNodeConfig, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowExecOptions, FlowInitOptions, FlowMemory, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, SymbolRef, SystemEvaluator, };
+export { Adapter, Awaitable, BaseNodeConfig, BotDecisionPromptBuilder, BotEvaluationNodeConfig, BotEvaluationPromptBuilder, BotStreamPromptBuilder, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowExecOptions, FlowInitOptions, FlowMemory, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, PromptBuilders, SymbolRef, SystemEvaluator, };

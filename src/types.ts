@@ -141,6 +141,25 @@ type FlowContent = {
 
 // executions
 
+type BotStreamPromptBuilder = (
+  prompt: string,
+  hasPreviousMessages: boolean,
+  input: NodeInput
+) => string;
+
+type BotEvaluationPromptBuilder = (prompt: string, input: NodeInput) => string;
+
+type BotDecisionPromptBuilder = (
+  nextNodeOptions: NextNodeOption[],
+  input: NodeInput
+) => string;
+
+type PromptBuilders = {
+  botStream: BotStreamPromptBuilder;
+  botEvaluation: BotEvaluationPromptBuilder;
+  botDecision: BotDecisionPromptBuilder;
+};
+
 type Message = { role: "SYSTEM" | "BOT" | "USER"; content: string };
 
 type SystemEvaluator = (
@@ -150,6 +169,7 @@ type SystemEvaluator = (
 ) => Awaitable<NodeOutput>;
 
 type FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS> = {
+  promptBuilders?: PromptBuilders;
   systemEvaluator?: SystemEvaluator;
   jsonChatOptions?: JSON_CHAT_OPTIONS;
   streamChatOptions?: STREAM_CHAT_OPTIONS;
@@ -187,7 +207,10 @@ export {
   Adapter,
   Awaitable,
   BaseNodeConfig,
+  BotDecisionPromptBuilder,
   BotEvaluationNodeConfig,
+  BotEvaluationPromptBuilder,
+  BotStreamPromptBuilder,
   DataObject,
   DecisionNodeOutput,
   EvaluationNodeOutput,
@@ -207,6 +230,7 @@ export {
   NodeOutput,
   NodeStatus,
   NodeType,
+  PromptBuilders,
   SymbolRef,
   SystemEvaluator,
 };

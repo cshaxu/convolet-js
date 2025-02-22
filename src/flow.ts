@@ -1,4 +1,5 @@
 import { Node } from "./node";
+import { defaultPromptBuilders } from "./prompts";
 import {
   Adapter,
   Awaitable,
@@ -18,6 +19,7 @@ import {
   NodeOutput,
   NodeStatus,
   NodeType,
+  PromptBuilders,
   SystemEvaluator,
 } from "./types";
 import { toObjectMap } from "./utils";
@@ -251,6 +253,8 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     STREAM_CHAT_OPTIONS,
     STREAM_CHAT_RESPONSE
   >;
+  promptBuilders: PromptBuilders;
+
   jsonChatOptions?: JSON_CHAT_OPTIONS;
   streamChatOptions?: STREAM_CHAT_OPTIONS;
   systemEvaluator?: SystemEvaluator;
@@ -308,6 +312,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
     >,
+
     options: FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>
   ) {
     this.content = content;
@@ -322,7 +327,12 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       (nc) => nc
     );
 
-    const { jsonChatOptions, streamChatOptions, systemEvaluator } = options;
+    const {
+      promptBuilders,
+      jsonChatOptions,
+      streamChatOptions,
+      systemEvaluator,
+    } = options;
 
     this.nodes = nodeContents
       .sort((a, b) => a.index - b.index)
@@ -336,12 +346,20 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
           nodeConfigByNodeKey,
           this.content.memory
         );
-        return new Node(nodeConfig, nc, input, adapter, systemEvaluator);
+        return new Node(
+          nodeConfig,
+          nc,
+          input,
+          adapter,
+          promptBuilders ?? defaultPromptBuilders,
+          systemEvaluator
+        );
       });
 
     this.adapter = adapter;
     this.jsonChatOptions = jsonChatOptions;
     this.streamChatOptions = streamChatOptions;
+    this.promptBuilders = promptBuilders ?? defaultPromptBuilders;
     this.systemEvaluator = systemEvaluator;
   }
 
@@ -427,6 +445,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       nodeContent,
       input,
       this.adapter,
+      this.promptBuilders,
       this.systemEvaluator
     );
     this.nodes.push(node);

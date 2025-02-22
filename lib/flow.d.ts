@@ -1,9 +1,10 @@
 import { Node } from "./node";
-import { Adapter, Awaitable, FlowConfig, FlowContent, FlowExecOptions, FlowInitOptions, FlowStatus, NodeInput, NodeOutput, SystemEvaluator } from "./types";
+import { Adapter, Awaitable, FlowConfig, FlowContent, FlowExecOptions, FlowInitOptions, FlowStatus, NodeInput, NodeOutput, PromptBuilders, SystemEvaluator } from "./types";
 declare class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     content: FlowContent;
     nodes: Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>[];
     adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>;
+    promptBuilders: PromptBuilders;
     jsonChatOptions?: JSON_CHAT_OPTIONS;
     streamChatOptions?: STREAM_CHAT_OPTIONS;
     systemEvaluator?: SystemEvaluator;

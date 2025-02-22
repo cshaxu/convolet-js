@@ -1,9 +1,4 @@
 import {
-  buildFullJsonPrompt,
-  buildFullNextNodeKeyPrompt,
-  buildFullStreamPrompt,
-} from "./prompts";
-import {
   Adapter,
   Awaitable,
   BotEvaluationNodeConfig,
@@ -16,6 +11,7 @@ import {
   NodeInput,
   NodeStatus,
   NodeType,
+  PromptBuilders,
   SystemEvaluator,
 } from "./types";
 
@@ -41,6 +37,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     STREAM_CHAT_OPTIONS,
     STREAM_CHAT_RESPONSE
   >;
+  private promptBuilders: PromptBuilders;
   private systemEvaluator?: SystemEvaluator;
 
   constructor(
@@ -52,12 +49,14 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       STREAM_CHAT_OPTIONS,
       STREAM_CHAT_RESPONSE
     >,
+    promptBuilders: PromptBuilders,
     systemEvaluator?: SystemEvaluator
   ) {
     this.config = config;
     this.content = content;
     this.input = input;
     this.adapter = adapter;
+    this.promptBuilders = promptBuilders;
     this.systemEvaluator = systemEvaluator;
   }
 
@@ -157,7 +156,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     const { prompt } = this.config as InteractionNodeConfig;
 
     // generate
-    const fullStreamPrompt = buildFullStreamPrompt(
+    const botStreamPrompt = this.promptBuilders.botStream(
       prompt,
       messages.length > 0,
       this.input
@@ -174,7 +173,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     };
 
     return await this.adapter.streamChat(
-      fullStreamPrompt,
+      botStreamPrompt,
       messages,
       callback,
       options
@@ -199,7 +198,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     // evaluate
     const { prompt, schema } = this.config as BotEvaluationNodeConfig;
     this.content.output = await this.adapter.jsonChat(
-      buildFullJsonPrompt(prompt, this.input),
+      this.promptBuilders.botEvaluation(prompt, this.input),
       schema,
       jsonChatOptions
     );
@@ -234,7 +233,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       typeof nextNodeOptions === "string"
         ? []
         : nextNodeOptions.filter((option) => typeof option !== "string");
-    const fullNextNodeKeyPrompt = buildFullNextNodeKeyPrompt(
+    const fullNextNodeKeyPrompt = this.promptBuilders.botDecision(
       promptedNextNodeOptions,
       this.input
     );

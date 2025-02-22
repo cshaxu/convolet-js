@@ -1,4 +1,10 @@
-import { NextNodeOption, NodeInput } from "./types";
+import {
+  BotDecisionPromptBuilder,
+  BotEvaluationPromptBuilder,
+  BotStreamPromptBuilder,
+  NodeInput,
+  PromptBuilders,
+} from "./types";
 
 const hasInput = (input: NodeInput): boolean => Object.keys(input).length > 0;
 
@@ -15,11 +21,11 @@ const buildFullPrompt = (prompt: string, input: NodeInput): string =>
     prompt,
   ].join("\n");
 
-const buildFullStreamPrompt = (
-  prompt: string,
-  hasPreviousMessages: boolean,
-  input: NodeInput
-): string =>
+const botStream: BotStreamPromptBuilder = (
+  prompt,
+  hasPreviousMessages,
+  input
+) =>
   buildFullPrompt(
     [
       prompt,
@@ -43,7 +49,7 @@ const buildFullStreamPrompt = (
     input
   );
 
-const buildFullJsonPrompt = (prompt: string, input: NodeInput): string =>
+const botEvaluation: BotEvaluationPromptBuilder = (prompt, input) =>
   buildFullPrompt(
     [
       prompt,
@@ -72,10 +78,7 @@ const buildFullJsonPrompt = (prompt: string, input: NodeInput): string =>
     input
   );
 
-const buildFullNextNodeKeyPrompt = (
-  nextNodeOptions: NextNodeOption[],
-  input: NodeInput
-): string =>
+const botDecision: BotDecisionPromptBuilder = (nextNodeOptions, input) =>
   buildFullPrompt(
     [
       ...(Object.keys(input).length === 0
@@ -99,8 +102,10 @@ const buildFullNextNodeKeyPrompt = (
     input
   );
 
-export {
-  buildFullJsonPrompt,
-  buildFullNextNodeKeyPrompt,
-  buildFullStreamPrompt,
+const defaultPromptBuilders: PromptBuilders = {
+  botStream,
+  botEvaluation,
+  botDecision,
 };
+
+export { defaultPromptBuilders };

@@ -1,11 +1,12 @@
-import { Adapter, Awaitable, Message, NodeConfig, NodeContent, NodeInput, NodeStatus, SystemEvaluator } from "./types";
+import { Adapter, Awaitable, Message, NodeConfig, NodeContent, NodeInput, NodeStatus, PromptBuilders, SystemEvaluator } from "./types";
 declare class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     config: NodeConfig;
     content: NodeContent;
     input: NodeInput;
     private adapter;
+    private promptBuilders;
     private systemEvaluator?;
-    constructor(config: NodeConfig, content: NodeContent, input: NodeInput, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>, systemEvaluator?: SystemEvaluator);
+    constructor(config: NodeConfig, content: NodeContent, input: NodeInput, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>, promptBuilders: PromptBuilders, systemEvaluator?: SystemEvaluator);
     private isInteractionNodeOrThrow;
     private isBotEvaluationNodeOrThrow;
     private isSystemEvaluationNodeOrThrow;
