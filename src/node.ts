@@ -2,7 +2,6 @@ import {
   Adapter,
   Awaitable,
   BotEvaluationNodeConfig,
-  DecisionNodeOutput,
   InteractionNodeConfig,
   InteractionNodeOutput,
   Message,
@@ -233,7 +232,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       typeof nextNodeOptions === "string"
         ? []
         : nextNodeOptions.filter((option) => typeof option !== "string");
-    const fullNextNodeKeyPrompt = this.promptBuilders.botDecision(
+    const botDecisionPrompt = this.promptBuilders.botDecision(
       promptedNextNodeOptions,
       this.input
     );
@@ -248,13 +247,11 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
                 : nextNodeOptions[0].nodeKey,
           }
         : promptedNextNodeOptions.length > 0
-        ? await this.adapter
-            .jsonChat(
-              fullNextNodeKeyPrompt,
-              "{ nextNodeKey: string, reason: string }",
-              jsonChatOptions
-            )
-            .then((r) => r as DecisionNodeOutput)
+        ? await this.adapter.jsonChat(
+            botDecisionPrompt,
+            "{ nextNodeKey: string, reason: string }",
+            jsonChatOptions
+          )
         : { nextNodeKey: "invalid nextNodeOptions" };
 
     // persist

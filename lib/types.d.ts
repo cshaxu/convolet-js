@@ -113,7 +113,7 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     deleteNodes(flowId: string): Promise<number>;
     createNode(content: NodeContent): Promise<NodeContent>;
     updateNode(content: NodeContent): Promise<NodeContent>;
-    jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Promise<NodeOutput>;
-    streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Promise<STREAM_CHAT_RESPONSE>;
+    jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Awaitable<NodeOutput>;
+    streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Awaitable<STREAM_CHAT_RESPONSE>;
 };
 export { Adapter, Awaitable, BaseNodeConfig, BotDecisionPromptBuilder, BotEvaluationNodeConfig, BotEvaluationPromptBuilder, BotStreamPromptBuilder, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowExecOptions, FlowInitOptions, FlowMemory, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, PromptBuilders, SymbolRef, SystemEvaluator, };

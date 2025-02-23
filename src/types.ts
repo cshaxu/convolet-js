@@ -194,13 +194,13 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     prompt: string,
     schema: string,
     options?: JSON_CHAT_OPTIONS
-  ): Promise<NodeOutput>;
+  ): Awaitable<NodeOutput>;
   streamChat(
     prompt: string,
     messages: Message[],
     onStreamDone: (text: string) => Promise<void>,
     options?: STREAM_CHAT_OPTIONS
-  ): Promise<STREAM_CHAT_RESPONSE>;
+  ): Awaitable<STREAM_CHAT_RESPONSE>;
 };
 
 export {
