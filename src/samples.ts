@@ -12,7 +12,7 @@ const singleNodeFlowConfig: FlowConfig = {
       outputParams: "data",
       nextNodeOptions: [],
       prompt: "Find out the year IBM was founded.",
-      schema: "{ year: number }",
+      schema: { year: "integer" },
     },
   ],
 };
@@ -29,7 +29,7 @@ const twoEvaluationNodeFlowConfig: FlowConfig = {
       outputParams: [{ name: "data", path: "" }],
       nextNodeOptions: "end",
       prompt: "Find out whether the year is a leap year.",
-      schema: "{ year: number; isLeapYear: boolean }",
+      schema: { year: "integer", isLeapYear: "boolean" },
     },
     {
       nodeType: NodeType.BOT_EVALUATION,
@@ -39,8 +39,11 @@ const twoEvaluationNodeFlowConfig: FlowConfig = {
       nextNodeOptions: [],
       prompt:
         "Tell if 3 year before the year from the input data is a leap year.",
-      schema:
-        "{ originalYear: number; threeYearsAgo: number; isLealYear: boolean }",
+      schema: {
+        originalYear: "integer",
+        threeYearsAgo: "integer",
+        isLealYear: "boolean",
+      },
     },
   ],
 };
@@ -65,8 +68,12 @@ const questionEvaluationFlowConfig: FlowConfig = {
       outputParams: "birthday",
       nextNodeOptions: "",
       prompt: "Parse the input data into year, month and date.",
-      schema:
-        "{ year: number; month: number; day: number; isLeapYear: boolean }",
+      schema: {
+        year: "integer",
+        month: "integer",
+        day: "integer",
+        isLeapYear: "boolean",
+      },
     },
   ],
 };
@@ -92,8 +99,13 @@ const complexFlowConfig: FlowConfig = {
       outputParams: [{ name: "birthday", path: "" }],
       nextNodeOptions: "decide-next",
       prompt: "Parse the input data into year, month and date.",
-      schema:
-        "{ year: number; month: number; date: number; isLeapYear: boolean; season: string }",
+      schema: {
+        year: "integer",
+        month: "integer",
+        date: "integer",
+        isLeapYear: "boolean",
+        season: "string",
+      },
     },
     {
       nodeType: NodeType.BOT_DECISION,
@@ -119,8 +131,13 @@ const complexFlowConfig: FlowConfig = {
       outputParams: [{ name: "birthdayPlus", path: "." }],
       nextNodeOptions: [],
       prompt: "Pass along the input data to your response",
-      schema:
-        "{ year: number; month: number; date: number; isLeapYear: boolean; season: string }",
+      schema: {
+        year: "integer",
+        month: "integer",
+        date: "integer",
+        isLeapYear: "boolean",
+        season: "string",
+      },
     },
   ],
 };

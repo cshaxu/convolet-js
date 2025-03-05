@@ -1,3 +1,5 @@
+import { JsonSchema } from "./schema";
+
 // common
 type Awaitable<T> = T | Promise<T>;
 
@@ -69,7 +71,7 @@ type BotEvaluationNodeConfig = BaseNodeConfig & {
   // prompt for bot to generate a respons
   prompt: string;
   // schema for bot output; execution node must have it to call llm
-  schema: string;
+  schema: JsonSchema;
 };
 
 type NodeConfig =
@@ -192,7 +194,7 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
   updateNode(content: NodeContent): Promise<NodeContent>;
   jsonChat(
     prompt: string,
-    schema: string,
+    schema: JsonSchema,
     options?: JSON_CHAT_OPTIONS
   ): Awaitable<NodeOutput>;
   streamChat(

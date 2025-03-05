@@ -249,7 +249,7 @@ class Node<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
         : promptedNextNodeOptions.length > 0
         ? await this.adapter.jsonChat(
             botDecisionPrompt,
-            "{ nextNodeKey: string, reason: string }",
+            { nextNodeKey: "string", reason: "string" },
             jsonChatOptions
           )
         : { nextNodeKey: "invalid nextNodeOptions" };

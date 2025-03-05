@@ -1,3 +1,4 @@
+import { JsonSchema } from "./schema";
 type Awaitable<T> = T | Promise<T>;
 declare enum NodeType {
     INTERACTION = "INTERACTION",
@@ -38,7 +39,7 @@ type InteractionNodeConfig = BaseNodeConfig & {
 type BotEvaluationNodeConfig = BaseNodeConfig & {
     nodeType: NodeType.BOT_EVALUATION;
     prompt: string;
-    schema: string;
+    schema: JsonSchema;
 };
 type NodeConfig = BaseNodeConfig | InteractionNodeConfig | BotEvaluationNodeConfig;
 type FlowConfig = {
@@ -113,7 +114,7 @@ type Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> = {
     deleteNodes(flowId: string): Promise<number>;
     createNode(content: NodeContent): Promise<NodeContent>;
     updateNode(content: NodeContent): Promise<NodeContent>;
-    jsonChat(prompt: string, schema: string, options?: JSON_CHAT_OPTIONS): Awaitable<NodeOutput>;
+    jsonChat(prompt: string, schema: JsonSchema, options?: JSON_CHAT_OPTIONS): Awaitable<NodeOutput>;
     streamChat(prompt: string, messages: Message[], onStreamDone: (text: string) => Promise<void>, options?: STREAM_CHAT_OPTIONS): Awaitable<STREAM_CHAT_RESPONSE>;
 };
 export { Adapter, Awaitable, BaseNodeConfig, BotDecisionPromptBuilder, BotEvaluationNodeConfig, BotEvaluationPromptBuilder, BotStreamPromptBuilder, DataObject, DecisionNodeOutput, EvaluationNodeOutput, FlowConfig, FlowContent, FlowExecOptions, FlowInitOptions, FlowMemory, FlowStatus, InteractionNodeConfig, InteractionNodeOutput, Message, NextNodeOption, NodeConfig, NodeContent, NodeInput, NodeOutput, NodeStatus, NodeType, PromptBuilders, SymbolRef, SystemEvaluator, };
