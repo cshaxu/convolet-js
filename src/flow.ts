@@ -318,14 +318,9 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     this.content = content;
     const nodeConfigByNodeKey = toObjectMap(
       this.content.config.nodes,
-      (nc) => nc.nodeKey,
-      (nc) => nc
+      (nc) => nc.nodeKey
     );
-    const nodeContentByIndex = toObjectMap(
-      nodeContents,
-      (nc) => nc.index,
-      (nc) => nc
-    );
+    const nodeContentByIndex = toObjectMap(nodeContents, (nc) => nc.index);
 
     const {
       promptBuilders,
@@ -404,8 +399,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   > {
     const nodeConfigByNodeKey = toObjectMap(
       this.content.config.nodes,
-      (nc) => nc.nodeKey,
-      (nc) => nc
+      (nc) => nc.nodeKey
     );
     const nodeConfig = nodeConfigByNodeKey.get(nodeKey);
     if (nodeConfig === undefined) {
@@ -428,11 +422,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     await this.adapter.createNode(nodeContent);
 
     nodeContents.push(nodeContent);
-    const nodeContentByIndex = toObjectMap(
-      nodeContents,
-      (nc) => nc.index,
-      (nc) => nc
-    );
+    const nodeContentByIndex = toObjectMap(nodeContents, (nc) => nc.index);
     const input = buildInput(
       this.content,
       nodeContent.index,
