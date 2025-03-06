@@ -1,4 +1,7 @@
 import * as z from "zod";
+type DeepPartial<T> = {
+    [K in keyof T]?: T[K] extends (infer U)[] ? DeepPartial<U>[] : T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
 declare const JSON_SCHEMA_ELEMENT_STRING: "string";
 declare const JSON_SCHEMA_ELEMENT_TEXT: "text";
 declare const JSON_SCHEMA_ELEMENT_BOOLEAN: "boolean";
@@ -29,4 +32,5 @@ interface JsonContent {
 type JsonZod = z.ZodTypeAny;
 declare function jsonToZod(json: JsonSchema): z.ZodTypeAny;
 declare function jsonToString(json: JsonSchema): string;
-export { JSON_SCHEMA_ELEMENT_BOOLEAN, JSON_SCHEMA_ELEMENT_DATE, JSON_SCHEMA_ELEMENT_EMAIL, JSON_SCHEMA_ELEMENT_FLOAT, JSON_SCHEMA_ELEMENT_INTEGER, JSON_SCHEMA_ELEMENT_STRING, JSON_SCHEMA_ELEMENT_TEXT, JSON_SCHEMA_ELEMENTS, JsonContent, JsonContentElement, JsonContentEnum, JsonContentLiteral, JsonSchema, JsonSchemaElement, JsonSchemaEnum, JsonSchemaLiteral, jsonToString, jsonToZod, JsonZod, JsonZodElement, JsonZodEnum, JsonZodLiteral, };
+declare function deepPrune<T>(obj: T): T | undefined;
+export { DeepPartial, deepPrune, JSON_SCHEMA_ELEMENT_BOOLEAN, JSON_SCHEMA_ELEMENT_DATE, JSON_SCHEMA_ELEMENT_EMAIL, JSON_SCHEMA_ELEMENT_FLOAT, JSON_SCHEMA_ELEMENT_INTEGER, JSON_SCHEMA_ELEMENT_STRING, JSON_SCHEMA_ELEMENT_TEXT, JSON_SCHEMA_ELEMENTS, JsonContent, JsonContentElement, JsonContentEnum, JsonContentLiteral, JsonSchema, JsonSchemaElement, JsonSchemaEnum, JsonSchemaLiteral, jsonToString, jsonToZod, JsonZod, JsonZodElement, JsonZodEnum, JsonZodLiteral, };

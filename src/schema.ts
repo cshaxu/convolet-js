@@ -1,5 +1,13 @@
 import * as z from "zod";
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends (infer U)[] // Check if it's an array
+    ? DeepPartial<U>[] // Apply DeepPartial to each element inside the array
+    : T[K] extends object
+    ? DeepPartial<T[K]> // Recursively process objects
+    : T[K]; // Keep primitives unchanged
+};
+
 const JSON_SCHEMA_ELEMENT_STRING = "string" as const;
 const JSON_SCHEMA_ELEMENT_TEXT = "text" as const;
 const JSON_SCHEMA_ELEMENT_BOOLEAN = "boolean" as const;
@@ -170,9 +178,7 @@ function buildEnumString(literals: JsonSchemaEnum): string {
 
 function buildArrayOrEnumZodObject(
   value: [JsonSchemaEnum] | [JsonSchemaElement] | JsonSchemaEnum | JsonSchema[]
-):
-  | z.ZodArray<JsonZodElement | JsonZodLiteral | JsonZodEnum | JsonZod>
-  | JsonZodEnum {
+): z.ZodTypeAny | JsonZodEnum {
   if (value.length === 0) {
     throw new Error("Unsupported type: []");
   }
@@ -181,16 +187,20 @@ function buildArrayOrEnumZodObject(
     if (typeof v === "object") {
       if (Array.isArray(v)) {
         // [JsonSchemaEnum]
-        return buildEnumZodObject(v).array();
+        return buildEnumZodObject(v).array().catch([]);
       } else {
         // [JsonSchema]
-        return jsonToZod(v).array();
+        return jsonToZod(v).array().catch([]);
       }
     } else if (typeof v === "string") {
       // [JsonSchemaElement] or JsonSchemaEnum ([JsonSchemaLiteral])
-      return buildPrimaryOrLiteralZodObject(
-        v as JsonSchemaElement | JsonSchemaLiteral
-      ).array();
+      return (
+        buildPrimaryOrLiteralZodObject(
+          v as JsonSchemaElement | JsonSchemaLiteral
+        ) as z.ZodTypeAny
+      )
+        .array()
+        .catch([]);
     } else {
       throw new Error(`Unsupported type: ${value}`);
     }
@@ -247,7 +257,7 @@ function jsonToZod(json: JsonSchema): z.ZodTypeAny {
     } else {
       throw new Error(`Unsupported type: ${value}`);
     }
-    return acc.extend({ [key]: obj.optional() });
+    return acc.extend({ [key]: obj.optional().catch(undefined) });
   }, z.object({})) as z.ZodTypeAny;
 }
 
@@ -272,7 +282,44 @@ function jsonToString(json: JsonSchema): string {
     .replace(/\u0001/g, '"');
 }
 
+function deepPrune<T>(obj: T): T | undefined {
+  if (obj === null || (typeof obj !== "object" && typeof obj !== "string")) {
+    return obj;
+  }
+
+  if (typeof obj === "string") {
+    if (obj.trim().length === 0) {
+      return undefined;
+    } else {
+      return obj;
+    }
+  }
+
+  if (Array.isArray(obj)) {
+    const array = obj
+      .map(deepPrune)
+      .filter((o) => o !== undefined) as unknown as T;
+    if ((array as any).length === 0) {
+      return undefined;
+    }
+  }
+
+  const object = Object.entries(obj).reduce((acc, [key, value]) => {
+    const purified = deepPrune(value);
+    if (purified !== undefined) {
+      (acc as any)[key] = purified;
+    }
+    return acc;
+  }, {} as T);
+  if (Object.keys(object as any).length === 0) {
+    return undefined;
+  }
+  return object;
+}
+
 export {
+  DeepPartial,
+  deepPrune,
   JSON_SCHEMA_ELEMENT_BOOLEAN,
   JSON_SCHEMA_ELEMENT_DATE,
   JSON_SCHEMA_ELEMENT_EMAIL,
