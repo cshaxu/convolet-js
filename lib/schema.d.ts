@@ -23,14 +23,16 @@ type JsonZodEnum = z.ZodLiteral<string> | z.ZodUnion<[
     z.ZodLiteral<string>,
     ...z.ZodLiteral<string>[]
 ]>;
-interface JsonSchema {
-    [key: string]: JsonSchemaElement | [JsonSchemaElement] | JsonSchemaLiteral | JsonSchemaEnum | [JsonSchemaEnum] | JsonSchema | [JsonSchema];
-}
-interface JsonContent {
-    [key: string]: JsonContentElement | JsonContentElement[] | JsonContentLiteral | JsonContentEnum | JsonContentEnum[] | JsonContent | JsonContent[];
-}
+type JsonSchemaValue = JsonSchemaElement | [JsonSchemaElement] | JsonSchemaLiteral | JsonSchemaEnum | [JsonSchemaEnum] | JsonSchema | [JsonSchema];
+type JsonContentValue = JsonContentElement | JsonContentElement[] | JsonContentLiteral | JsonContentEnum | JsonContentEnum[] | JsonContent | JsonContent[];
+type JsonSchema = {
+    [key: string]: JsonSchemaValue;
+};
+type JsonContent = {
+    [key: string]: JsonContentValue;
+};
 type JsonZod = z.ZodTypeAny;
 declare function jsonToZod(json: JsonSchema): z.ZodTypeAny;
 declare function jsonToString(json: JsonSchema): string;
 declare function deepPrune<T>(obj: T): T | undefined;
-export { DeepPartial, deepPrune, JSON_SCHEMA_ELEMENT_BOOLEAN, JSON_SCHEMA_ELEMENT_DATE, JSON_SCHEMA_ELEMENT_EMAIL, JSON_SCHEMA_ELEMENT_FLOAT, JSON_SCHEMA_ELEMENT_INTEGER, JSON_SCHEMA_ELEMENT_STRING, JSON_SCHEMA_ELEMENT_TEXT, JSON_SCHEMA_ELEMENTS, JsonContent, JsonContentElement, JsonContentEnum, JsonContentLiteral, JsonSchema, JsonSchemaElement, JsonSchemaEnum, JsonSchemaLiteral, jsonToString, jsonToZod, JsonZod, JsonZodElement, JsonZodEnum, JsonZodLiteral, };
+export { DeepPartial, deepPrune, JSON_SCHEMA_ELEMENT_BOOLEAN, JSON_SCHEMA_ELEMENT_DATE, JSON_SCHEMA_ELEMENT_EMAIL, JSON_SCHEMA_ELEMENT_FLOAT, JSON_SCHEMA_ELEMENT_INTEGER, JSON_SCHEMA_ELEMENT_STRING, JSON_SCHEMA_ELEMENT_TEXT, JSON_SCHEMA_ELEMENTS, JsonContent, JsonContentElement, JsonContentEnum, JsonContentLiteral, JsonContentValue, JsonSchema, JsonSchemaElement, JsonSchemaEnum, JsonSchemaLiteral, JsonSchemaValue, jsonToString, jsonToZod, JsonZod, JsonZodElement, JsonZodEnum, JsonZodLiteral, };

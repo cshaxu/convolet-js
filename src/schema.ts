@@ -50,26 +50,25 @@ type JsonZodEnum =
       [z.ZodLiteral<string>, z.ZodLiteral<string>, ...z.ZodLiteral<string>[]]
     >;
 
-interface JsonSchema {
-  [key: string]:
-    | JsonSchemaElement // primary type
-    | [JsonSchemaElement] // array of primary type
-    | JsonSchemaLiteral // literal
-    | JsonSchemaEnum // enum
-    | [JsonSchemaEnum] // array of enum
-    | JsonSchema // nested object
-    | [JsonSchema]; // array of nested objects
-}
-interface JsonContent {
-  [key: string]:
-    | JsonContentElement // primary type
-    | JsonContentElement[] // array of primary type
-    | JsonContentLiteral // literal
-    | JsonContentEnum // enum
-    | JsonContentEnum[] // array of enum
-    | JsonContent // nested object
-    | JsonContent[]; // array of nested objects
-}
+type JsonSchemaValue =
+  | JsonSchemaElement // primary type
+  | [JsonSchemaElement] // array of primary type
+  | JsonSchemaLiteral // literal
+  | JsonSchemaEnum // enum
+  | [JsonSchemaEnum] // array of enum
+  | JsonSchema // nested object
+  | [JsonSchema]; // array of nested objects
+type JsonContentValue =
+  | JsonContentElement // primary type
+  | JsonContentElement[] // array of primary type
+  | JsonContentLiteral // literal
+  | JsonContentEnum // enum
+  | JsonContentEnum[] // array of enum
+  | JsonContent // nested object
+  | JsonContent[]; // array of nested objects
+
+type JsonSchema = { [key: string]: JsonSchemaValue };
+type JsonContent = { [key: string]: JsonContentValue };
 type JsonZod = z.ZodTypeAny;
 
 function buildPrimaryZodObject(value: JsonSchemaElement): JsonZodElement {
@@ -332,10 +331,12 @@ export {
   JsonContentElement,
   JsonContentEnum,
   JsonContentLiteral,
+  JsonContentValue,
   JsonSchema,
   JsonSchemaElement,
   JsonSchemaEnum,
   JsonSchemaLiteral,
+  JsonSchemaValue,
   jsonToString,
   jsonToZod,
   JsonZod,
