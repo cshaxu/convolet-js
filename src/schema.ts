@@ -36,10 +36,18 @@ type JsonSchemaPrimitive =
   | typeof JSON_SCHEMA_PRIMITIVE_DATE;
 type JsonContentPrimitive = string | boolean | number | Date;
 type JsonZodPrimitive = z.ZodString | z.ZodBoolean | z.ZodNumber | z.ZodDate;
+const isJsonSchemaPrimitive = (
+  value: JsonSchemaValue
+): value is JsonSchemaPrimitive =>
+  typeof value === "string" && JSON_SCHEMA_PRIMITIVES.includes(value);
 
 type JsonSchemaLiteral = `"${string}"`;
 type JsonContentLiteral = string;
 type JsonZodLiteral = z.ZodLiteral<string>;
+const isJsonSchemaLiteral = (
+  value: JsonSchemaValue
+): value is JsonSchemaLiteral =>
+  typeof value === "string" && value.startsWith('"') && value.endsWith('"');
 
 type JsonSchemaEnum = [JsonSchemaLiteral, ...JsonSchemaLiteral[]];
 type JsonContentEnum = string;
@@ -48,6 +56,8 @@ type JsonZodEnum =
   | z.ZodUnion<
       [z.ZodLiteral<string>, z.ZodLiteral<string>, ...z.ZodLiteral<string>[]]
     >;
+const isJsonSchemaEnum = (type: JsonSchemaValue): type is JsonSchemaEnum =>
+  Array.isArray(type) && type.length > 0 && type.every(isJsonSchemaLiteral);
 
 type JsonSchemaElement =
   | JsonSchemaPrimitive // primary type
@@ -61,6 +71,22 @@ type JsonContentElement =
   | JsonContentLiteral // literal
   | JsonContentEnum // enum
   | JsonContentEnum[]; // array of enum
+const isJsonSchemaPrimitiveArray = (
+  value: JsonSchemaValue
+): value is [JsonSchemaPrimitive] =>
+  Array.isArray(value) && value.length === 1 && isJsonSchemaPrimitive(value[0]);
+const isJsonSchemaEnumArray = (
+  value: JsonSchemaValue
+): value is [JsonSchemaEnum] =>
+  Array.isArray(value) && value.length === 1 && isJsonSchemaEnum(value[0]);
+const isJsonSchemaElement = (
+  value: JsonSchemaValue
+): value is JsonSchemaElement =>
+  isJsonSchemaPrimitive(value) ||
+  isJsonSchemaPrimitiveArray(value) ||
+  isJsonSchemaLiteral(value) ||
+  isJsonSchemaEnum(value) ||
+  isJsonSchemaEnumArray(value);
 
 type JsonSchemaValue =
   | JsonSchemaElement
@@ -70,13 +96,28 @@ type JsonContentValue =
   | JsonContentElement
   | JsonContent // nested object
   | JsonContent[]; // array of nested objects
+const isJsonSchemaNestedObject = (
+  value: JsonSchemaValue
+): value is JsonSchema =>
+  !isJsonSchemaElement(value) &&
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value);
+const isJsonSchemaNestedObjectArray = (
+  value: JsonSchemaValue
+): value is [JsonSchema] =>
+  Array.isArray(value) &&
+  value.length === 1 &&
+  isJsonSchemaNestedObject(value[0]);
 
 type JsonSchema = { [key: string]: JsonSchemaValue };
 type JsonContent = { [key: string]: JsonContentValue };
 type JsonZod = z.ZodTypeAny;
 
-function buildPrimaryZodObject(value: JsonSchemaPrimitive): JsonZodPrimitive {
-  switch (value) {
+function buildPrimaryZodObject(
+  primitive: JsonSchemaPrimitive
+): JsonZodPrimitive {
+  switch (primitive) {
     case JSON_SCHEMA_PRIMITIVE_STRING:
       return z.string();
     case JSON_SCHEMA_PRIMITIVE_TEXT:
@@ -92,26 +133,24 @@ function buildPrimaryZodObject(value: JsonSchemaPrimitive): JsonZodPrimitive {
     case JSON_SCHEMA_PRIMITIVE_DATE:
       return z.coerce.date();
     default:
-      throw new Error(`Unsupported primary type: ${value}`);
+      throw new Error(`Unsupported primary type: ${primitive}`);
   }
 }
-
-function buildPrimaryString(value: JsonSchemaPrimitive): string {
-  if (JSON_SCHEMA_PRIMITIVES.includes(value)) {
-    return value;
+function buildPrimaryString(primitive: JsonSchemaPrimitive): string {
+  if (isJsonSchemaPrimitive(primitive)) {
+    return primitive;
   }
-  throw new Error(`Unsupported primary type: ${value}`);
+  throw new Error(`Unsupported primary type: ${primitive}`);
 }
 
 function buildLiteralZodObject(literal: JsonSchemaLiteral): JsonZodLiteral {
-  if (literal.startsWith('"') && literal.endsWith('"')) {
+  if (isJsonSchemaLiteral(literal)) {
     return z.literal(literal.slice(1, -1));
   }
   throw new Error(`Unsupported literal type: ${literal}`);
 }
-
 function buildLiteralString(literal: JsonSchemaLiteral): string {
-  if (literal.startsWith('"') && literal.endsWith('"')) {
+  if (isJsonSchemaLiteral(literal)) {
     return literal;
   }
   throw new Error(`Unsupported literal type: ${literal}`);
@@ -120,21 +159,20 @@ function buildLiteralString(literal: JsonSchemaLiteral): string {
 function buildPrimaryOrLiteralZodObject(
   value: JsonSchemaPrimitive | JsonSchemaLiteral
 ): JsonZodPrimitive | JsonZodLiteral {
-  if (JSON_SCHEMA_PRIMITIVES.includes(value)) {
+  if (isJsonSchemaPrimitive(value)) {
     return buildPrimaryZodObject(value as JsonSchemaPrimitive);
-  } else if (value.startsWith('"') && value.endsWith('"')) {
+  } else if (isJsonSchemaLiteral(value)) {
     return buildLiteralZodObject(value as JsonSchemaLiteral);
   } else {
     throw new Error(`Unsupported type: ${value}`);
   }
 }
-
 function buildPrimaryOrLiteralString(
   value: JsonSchemaPrimitive | JsonSchemaLiteral
 ): string {
-  if (JSON_SCHEMA_PRIMITIVES.includes(value)) {
+  if (isJsonSchemaPrimitive(value)) {
     return buildPrimaryString(value as JsonSchemaPrimitive);
-  } else if (value.startsWith('"') && value.endsWith('"')) {
+  } else if (isJsonSchemaLiteral(value)) {
     return buildLiteralString(value as JsonSchemaLiteral);
   } else {
     throw new Error(`Unsupported type: ${value}`);
@@ -238,10 +276,10 @@ function buildArrayOrEnumString(
         return `${jsonToString(v)}[]`;
       }
     } else if (typeof v === "string") {
-      if (JSON_SCHEMA_PRIMITIVES.includes(v)) {
+      if (isJsonSchemaPrimitive(v)) {
         // [JsonSchemaPrimitive]
         return `${buildPrimaryString(v as JsonSchemaPrimitive)}[]`;
-      } else if (v.startsWith('"') && v.endsWith('"')) {
+      } else if (isJsonSchemaLiteral(v)) {
         // JsonSchemaEnum ([JsonSchemaLiteral])
         return `(${buildLiteralString(v as JsonSchemaLiteral)})[]`;
       } else {
@@ -331,6 +369,14 @@ function deepPrune<T>(obj: T): T | undefined {
 export {
   DeepPartial,
   deepPrune,
+  isJsonSchemaElement,
+  isJsonSchemaEnum,
+  isJsonSchemaEnumArray,
+  isJsonSchemaLiteral,
+  isJsonSchemaNestedObject,
+  isJsonSchemaNestedObjectArray,
+  isJsonSchemaPrimitive,
+  isJsonSchemaPrimitiveArray,
   JSON_SCHEMA_PRIMITIVE_BOOLEAN,
   JSON_SCHEMA_PRIMITIVE_DATE,
   JSON_SCHEMA_PRIMITIVE_EMAIL,
