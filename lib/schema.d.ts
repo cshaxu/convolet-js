@@ -1,7 +1,4 @@
 import * as z from "zod";
-type DeepPartial<T> = {
-    [K in keyof T]?: T[K] extends (infer U)[] ? DeepPartial<U>[] : T[K] extends object ? DeepPartial<T[K]> : T[K];
-};
 declare const JSON_SCHEMA_PRIMITIVE_STRING: "string";
 declare const JSON_SCHEMA_PRIMITIVE_TEXT: "text";
 declare const JSON_SCHEMA_PRIMITIVE_BOOLEAN: "boolean";
@@ -44,5 +41,4 @@ type JsonContent = {
 type JsonZod = z.ZodTypeAny;
 declare function jsonToZod(json: JsonSchema): z.ZodTypeAny;
 declare function jsonToString(json: JsonSchema): string;
-declare function deepPrune<T>(obj: T): T | undefined;
-export { DeepPartial, deepPrune, isJsonSchemaElement, isJsonSchemaEnum, isJsonSchemaEnumArray, isJsonSchemaLiteral, isJsonSchemaNestedObject, isJsonSchemaNestedObjectArray, isJsonSchemaPrimitive, isJsonSchemaPrimitiveArray, JSON_SCHEMA_PRIMITIVE_BOOLEAN, JSON_SCHEMA_PRIMITIVE_DATE, JSON_SCHEMA_PRIMITIVE_EMAIL, JSON_SCHEMA_PRIMITIVE_FLOAT, JSON_SCHEMA_PRIMITIVE_INTEGER, JSON_SCHEMA_PRIMITIVE_STRING, JSON_SCHEMA_PRIMITIVE_TEXT, JSON_SCHEMA_PRIMITIVES, JsonContent, JsonContentElement, JsonContentEnum, JsonContentLiteral, JsonContentPrimitive, JsonContentValue, JsonSchema, JsonSchemaElement, JsonSchemaEnum, JsonSchemaLiteral, JsonSchemaPrimitive, JsonSchemaValue, jsonToString, jsonToZod, JsonZod, JsonZodEnum, JsonZodLiteral, JsonZodPrimitive, };
+export { isJsonSchemaElement, isJsonSchemaEnum, isJsonSchemaEnumArray, isJsonSchemaLiteral, isJsonSchemaNestedObject, isJsonSchemaNestedObjectArray, isJsonSchemaPrimitive, isJsonSchemaPrimitiveArray, JSON_SCHEMA_PRIMITIVE_BOOLEAN, JSON_SCHEMA_PRIMITIVE_DATE, JSON_SCHEMA_PRIMITIVE_EMAIL, JSON_SCHEMA_PRIMITIVE_FLOAT, JSON_SCHEMA_PRIMITIVE_INTEGER, JSON_SCHEMA_PRIMITIVE_STRING, JSON_SCHEMA_PRIMITIVE_TEXT, JSON_SCHEMA_PRIMITIVES, JsonContent, JsonContentElement, JsonContentEnum, JsonContentLiteral, JsonContentPrimitive, JsonContentValue, JsonSchema, JsonSchemaElement, JsonSchemaEnum, JsonSchemaLiteral, JsonSchemaPrimitive, JsonSchemaValue, jsonToString, jsonToZod, JsonZod, JsonZodEnum, JsonZodLiteral, JsonZodPrimitive, };

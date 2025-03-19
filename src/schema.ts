@@ -1,13 +1,5 @@
 import * as z from "zod";
 
-type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends (infer U)[] // Check if it's an array
-    ? DeepPartial<U>[] // Apply DeepPartial to each element inside the array
-    : T[K] extends object
-    ? DeepPartial<T[K]> // Recursively process objects
-    : T[K]; // Keep primitives unchanged
-};
-
 const JSON_SCHEMA_PRIMITIVE_STRING = "string" as const;
 const JSON_SCHEMA_PRIMITIVE_TEXT = "text" as const;
 const JSON_SCHEMA_PRIMITIVE_BOOLEAN = "boolean" as const;
@@ -331,44 +323,7 @@ function jsonToString(json: JsonSchema): string {
     .replace(/\u0001/g, '"');
 }
 
-function deepPrune<T>(obj: T): T | undefined {
-  if (obj === null || (typeof obj !== "object" && typeof obj !== "string")) {
-    return obj;
-  }
-
-  if (typeof obj === "string") {
-    if (obj.trim().length === 0) {
-      return undefined;
-    } else {
-      return obj;
-    }
-  }
-
-  if (Array.isArray(obj)) {
-    const array = obj
-      .map(deepPrune)
-      .filter((o) => o !== undefined) as unknown as T;
-    if ((array as any).length === 0) {
-      return undefined;
-    }
-  }
-
-  const object = Object.entries(obj).reduce((acc, [key, value]) => {
-    const purified = deepPrune(value);
-    if (purified !== undefined) {
-      (acc as any)[key] = purified;
-    }
-    return acc;
-  }, {} as T);
-  if (Object.keys(object as any).length === 0) {
-    return undefined;
-  }
-  return object;
-}
-
 export {
-  DeepPartial,
-  deepPrune,
   isJsonSchemaElement,
   isJsonSchemaEnum,
   isJsonSchemaEnumArray,
