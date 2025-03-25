@@ -191,53 +191,57 @@ function validateFlowConfig(flowConfig: FlowConfig): void {
   });
 }
 
-function buildInput(
+function getVariable(
+  param: string,
+  nodeContentByIndex: Map<number, NodeContent>,
+  memory: FlowMemory
+): any {
+  const symbolRef = memory.symbolRefs[param];
+
+  if (symbolRef === undefined) {
+    // fallback to initial input
+    return memory.initial[param];
+  }
+
+  const { nodeIndex, path } = symbolRef;
+  const inputNode = nodeContentByIndex.get(nodeIndex);
+  const input = inputNode?.output ?? undefined;
+  return path.reduce(
+    (a, p) => (a === undefined ? undefined : a[p]),
+    input as NodeInput
+  );
+}
+
+function buildNodeInput(
   flowContent: FlowContent,
   index: number,
   nodeContentByIndex: Map<number, NodeContent>,
   nodeConfigByNodeKey: Map<string, NodeConfig>,
   memory: FlowMemory
 ): NodeInput {
-  const currentContent = nodeContentByIndex.get(index);
+  const currentNodeContent = nodeContentByIndex.get(index);
 
   // validate
-  if (currentContent === undefined) {
+  if (currentNodeContent === undefined) {
     new Error(
       buildContentErrorMessage(flowContent, `missing NodeContent (${index})`)
     );
     return {};
   }
-  const currentConfig = nodeConfigByNodeKey.get(currentContent.key);
-  if (currentConfig === undefined) {
+  const currentNodeConfig = nodeConfigByNodeKey.get(currentNodeContent.key);
+  if (currentNodeConfig === undefined) {
     new Error(
       buildContentErrorMessage(
         flowContent,
-        `missing NodeConfig (${currentContent.key})`
+        `missing NodeConfig (${currentNodeContent.key})`
       )
     );
     return {};
   }
 
   // retrieve
-  return currentConfig.inputParams.reduce((acc, param) => {
-    const symbolRef = memory.symbolRefs[param];
-
-    if (symbolRef === undefined) {
-      // fallback to initial input
-      const value = memory.initial[param];
-      if (value !== undefined) {
-        acc[param] = value;
-      }
-      return acc;
-    }
-
-    const { nodeIndex, path } = symbolRef;
-    const inputNode = nodeContentByIndex.get(nodeIndex);
-    const input = inputNode?.output ?? undefined;
-    const value = path.reduce(
-      (a, p) => (a === undefined ? undefined : a[p]),
-      input as NodeInput
-    );
+  return currentNodeConfig.inputParams.reduce((acc, param) => {
+    const value = getVariable(param, nodeContentByIndex, memory);
     if (value !== undefined) {
       acc[param] = value;
     }
@@ -334,7 +338,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
       .filter((nc) => nodeConfigByNodeKey.has(nc.key))
       .map((nc) => {
         const nodeConfig = nodeConfigByNodeKey.get(nc.key)!;
-        const input = buildInput(
+        const input = buildNodeInput(
           content,
           nc.index,
           nodeContentByIndex,
@@ -362,6 +366,12 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     const count = await this.adapter.deleteNodes(this.content.id);
     await this.adapter.deleteFlow(this.content.id);
     return count + 1;
+  }
+
+  public getVariable(param: string): any {
+    const nodeContents = this.nodes.map((n) => n.content);
+    const nodeContentByIndex = toObjectMap(nodeContents, (nc) => nc.index);
+    return getVariable(param, nodeContentByIndex, this.content.memory);
   }
 
   public getStatus(): FlowStatus {
@@ -423,7 +433,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
 
     nodeContents.push(nodeContent);
     const nodeContentByIndex = toObjectMap(nodeContents, (nc) => nc.index);
-    const input = buildInput(
+    const input = buildNodeInput(
       this.content,
       nodeContent.index,
       nodeContentByIndex,

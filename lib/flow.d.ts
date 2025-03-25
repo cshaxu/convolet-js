@@ -12,6 +12,7 @@ declare class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>
     static create<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>(config: FlowConfig, initialInput: NodeInput, adapter: Adapter<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>, options?: FlowInitOptions<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS>): Promise<Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE>>;
     private constructor();
     delete(): Promise<number>;
+    getVariable(param: string): any;
     getStatus(): FlowStatus;
     private start;
     private next;
