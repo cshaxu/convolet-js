@@ -1,4 +1,4 @@
-import { JsonSchema } from "./schema";
+import { JsonSchema } from "zschema";
 
 // common
 type Awaitable<T> = T | Promise<T>;

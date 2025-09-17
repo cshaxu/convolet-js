@@ -1,4 +1,4 @@
-import { JsonSchema } from "./schema";
+import { JsonSchema } from "zschema";
 type Awaitable<T> = T | Promise<T>;
 declare enum NodeType {
     INTERACTION = "INTERACTION",

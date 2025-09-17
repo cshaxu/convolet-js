@@ -1,6 +1,6 @@
 {
   "name": "convolet",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "AI agent framework with human in the loop",
   "main": "./lib/index.js",
   "scripts": {
@@ -34,6 +34,7 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "zschema": "github:cshaxu/zschema-js#914611061f0751fe8b0f0369f2488ea34dc20cb8"
   }
 }
