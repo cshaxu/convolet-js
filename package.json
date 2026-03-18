@@ -34,7 +34,6 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
-    "zod": "^3.24.2",
-    "zschema": "github:cshaxu/zschema-js#914611061f0751fe8b0f0369f2488ea34dc20cb8"
+    "zschema": "github:cshaxu/zschema-js#713f6634f132e9e77e41aa3c0fa2d3e2bad2a257"
   }
 }
