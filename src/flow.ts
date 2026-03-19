@@ -58,6 +58,10 @@ function getOnlyNextNodeKey(
     : nextNodeOptions[0].nodeKey;
 }
 
+function getLastItem<T>(items: T[]): T | undefined {
+  return items.length > 0 ? items[items.length - 1] : undefined;
+}
+
 function validateFlowConfig(flowConfig: FlowConfig): void {
   const { flowKey, nodes, startNodeKey, endNodeKey } = flowConfig;
 
@@ -378,7 +382,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     if (this.nodes.length === 0) {
       return FlowStatus.INITIATED;
     }
-    const lastNode = this.nodes.at(-1);
+    const lastNode = getLastItem(this.nodes);
     if (
       lastNode !== undefined &&
       lastNode.config.nodeKey === this.content.config.endNodeKey &&
@@ -497,7 +501,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
   // step awaiting user input: return null and you should call stream() next
   public async step(options?: FlowExecOptions): Promise<NodeOutput | null> {
     const { userInput, callBefore, callAfter } = options ?? {};
-    const currentNode = this.nodes.at(-1) ?? (await this.start());
+    const currentNode = getLastItem(this.nodes) ?? (await this.start());
 
     if (callBefore !== undefined) {
       await callBefore(currentNode.content);
@@ -590,7 +594,7 @@ class Flow<JSON_CHAT_OPTIONS, STREAM_CHAT_OPTIONS, STREAM_CHAT_RESPONSE> {
     onStreamDone: (text: string) => Awaitable<void>,
     streamChatOptions?: STREAM_CHAT_OPTIONS
   ): Promise<STREAM_CHAT_RESPONSE> {
-    const currentNode = this.nodes.at(-1);
+    const currentNode = getLastItem(this.nodes);
     if (currentNode === undefined) {
       throw new Error(
         buildContentErrorMessage(

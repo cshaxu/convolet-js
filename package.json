@@ -30,10 +30,10 @@
     "lib"
   ],
   "devDependencies": {
-    "@types/node": "^22.13.5",
-    "typescript": "^5.7.3"
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "zschema": "github:cshaxu/zschema-js#713f6634f132e9e77e41aa3c0fa2d3e2bad2a257"
+    "zschema": "github:cshaxu/zschema-js#68b2f964d1fba6c650c417d9180e6d8aa7b0575e"
   }
 }
